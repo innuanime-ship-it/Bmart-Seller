@@ -6,7 +6,7 @@ import {
   LogOut, Shield, Search, ArrowUpDown, ChevronRight, AlertCircle
 } from 'lucide-react';
 
-const ADMIN_PASS = "BarijanAdmin2026@";
+const ADMIN_PASS = "IN1511RNB2008";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
