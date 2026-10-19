@@ -6,7 +6,7 @@ import {
   LogOut, Shield, Search, Printer, ChevronRight, AlertCircle,
   Settings, PhoneCall, MessageCircle, ArrowLeft, Eye, Copy, QrCode, X, Sparkles,
   Calendar, Layers, Tag, EyeOff, Check, Sliders, ShieldCheck, Lock, ArrowRight,
-  MessageSquare, Image as ImageIcon, Facebook, Instagram
+  MessageSquare, Image as ImageIcon, Facebook, Instagram, ShieldAlert
 } from 'lucide-react';
 
 const ADMIN_PASS = "IN1511RNB2008";
@@ -57,7 +57,7 @@ export default function App() {
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('bmart_seller_logged') === 'true');
   const [passwordInput, setPasswordInput] = useState('');
-  const [activeTab, setActiveTab] = useState('orders'); // 'orders' | 'returns' | 'products' | 'add_product' | 'settings'
+  const [activeTab, setActiveTab] = useState('orders');
 
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
@@ -67,6 +67,7 @@ export default function App() {
   // Modals & UI States
   const [selectedScreenshot, setSelectedScreenshot] = useState(null);
   const [selectedDamagePhoto, setSelectedDamagePhoto] = useState(null);
+  const [selectedItemPhoto, setSelectedItemPhoto] = useState(null);
   const [printOrder, setPrintOrder] = useState(null);
   const [hideItemInPrint, setHideItemInPrint] = useState(false);
   const [previewProduct, setPreviewProduct] = useState(null);
@@ -87,7 +88,7 @@ export default function App() {
   const [prodForm, setProdForm] = useState({
     title: '', description: '', category: 'Fashion (Kapde)', price: '', mrp: '', min_quantity: '1',
     delivery_fee: '49', sizes: 'S, M, L, XL', fabric: 'Pure Cotton', mfg_date: '', expiry_date: '',
-    delivery_days: '2', allow_cancel: true, cancel_hours: '12', allow_return: true, return_days: '7', 
+    delivery_days: '2', cancel_hours: '12', return_days: '7', 
     images: [], seller_code: 'BM-01', upi_id: 'Barijanmart@upi'
   });
 
@@ -131,7 +132,7 @@ export default function App() {
     if (!clean) return showNotification("Error", "Password box khali hai!", "error");
     if (clean === ADMIN_PASS || clean.toUpperCase() === ADMIN_PASS) {
       setIsAuthenticated(true); localStorage.setItem('bmart_seller_logged', 'true'); setPasswordInput('');
-      showNotification("Login Safal", "BMart Seller App me swagat hai.", "success");
+      showNotification("Login Safal", "BMart Seller Station me swagat hai.", "success");
     } else { showNotification("Access Denied", "Galat Master Password!", "error"); }
   };
 
@@ -193,8 +194,8 @@ export default function App() {
     if (!prodForm.title || !prodForm.price || !prodForm.images.length) return showNotification("Adhoora Form", "Title, Price aur 1 Photo anivarya hai!", "error");
     
     const finalCategory = isCustomCategory ? (customCategoryText.trim() || 'General') : prodForm.category;
-    const cancelHoursVal = prodForm.allow_cancel ? Number(prodForm.cancel_hours || 0) : 0;
-    const returnDaysVal = prodForm.allow_return ? Number(prodForm.return_days || 0) : 0;
+    const cancelHoursVal = Number(prodForm.cancel_hours || 0);
+    const returnDaysVal = Number(prodForm.return_days || 0);
     const dynamicReturnPolicy = returnDaysVal > 0 ? `${returnDaysVal} Din Return / Replacement Policy` : "Return Not Allowed";
 
     const payload = {
@@ -212,7 +213,7 @@ export default function App() {
     else {
       showNotification("Safal", "Product Update/Publish Ho Gaya!", "success");
       setEditingId(null); setIsCustomCategory(false); setCustomCategoryText('');
-      setProdForm({ title: '', description: '', category: 'Fashion (Kapde)', price: '', mrp: '', min_quantity: '1', delivery_fee: '49', delivery_days: '2', sizes: 'S, M, L, XL', fabric: 'Pure Cotton', mfg_date: '', expiry_date: '', allow_cancel: true, cancel_hours: '12', allow_return: true, return_days: '7', images: [], seller_code: 'BM-01', upi_id: 'Barijanmart@upi' });
+      setProdForm({ title: '', description: '', category: 'Fashion (Kapde)', price: '', mrp: '', min_quantity: '1', delivery_fee: '49', delivery_days: '2', sizes: 'S, M, L, XL', fabric: 'Pure Cotton', mfg_date: '', expiry_date: '', cancel_hours: '12', return_days: '7', images: [], seller_code: 'BM-01', upi_id: 'Barijanmart@upi' });
       setActiveTab('products'); fetchProducts();
     }
   };
@@ -250,8 +251,10 @@ export default function App() {
     if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col justify-between items-center p-6 font-sans select-none relative overflow-hidden">
+        {/* Glow Spheres */}
         <div className="absolute -top-32 -left-32 w-80 h-80 bg-emerald-500/20 rounded-full blur-[100px] pointer-events-none"></div>
         <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-indigo-500/20 rounded-full blur-[100px] pointer-events-none"></div>
+
         {appAlert && (
           <div className="absolute top-10 left-4 right-4 z-50 animate-bounce">
             <div className={`p-4 rounded-2xl shadow-2xl flex items-center gap-3 text-white ${appAlert.type === 'error' ? 'bg-gradient-to-r from-rose-600 to-red-600' : 'bg-gradient-to-r from-emerald-600 to-teal-600'}`}>
@@ -260,20 +263,58 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {/* Top App Header */}
+        <div className="w-full flex justify-between items-center z-10 pt-2">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-[11px] font-black uppercase tracking-widest text-emerald-400">BMart Hub Core</span>
+          </div>
+          <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-900 text-slate-400 border border-slate-800">Barijan Mart</span>
+        </div>
+
+        {/* Professional Central Login Card */}
         <div className="w-full max-w-xs z-10 flex flex-col items-center my-auto">
           <div className="relative mb-6">
-            <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 flex items-center justify-center shadow-2xl ring-4 ring-emerald-500/20"><Shield className="text-white drop-shadow-md" size={44} /></div>
-            <div className="absolute -bottom-1.5 -right-1.5 bg-slate-900 border-2 border-slate-800 p-1.5 rounded-xl"><Lock size={14} className="text-emerald-400" /></div>
+            <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 flex items-center justify-center shadow-2xl shadow-emerald-500/30 ring-4 ring-emerald-500/20">
+              <Shield className="text-white drop-shadow-md" size={44} />
+            </div>
+            <div className="absolute -bottom-1.5 -right-1.5 bg-slate-900 border-2 border-slate-800 p-1.5 rounded-xl">
+              <Lock size={14} className="text-emerald-400" />
+            </div>
           </div>
-          <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-400 tracking-tight text-center">Seller Station</h2>
-          <p className="text-xs text-slate-400 font-medium text-center mt-1 mb-8">Central Store Operations Portal</p>
+
+          <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-400 tracking-tight text-center">
+            Seller Station
+          </h2>
+          <p className="text-xs text-slate-400 font-medium text-center mt-1 mb-7">Rural Doorstep Commerce Admin</p>
+
           <form onSubmit={handleLogin} className="w-full flex flex-col gap-3.5">
             <div className="relative">
               <Lock size={15} className="absolute left-4 top-3.5 text-slate-500" />
-              <input type="password" placeholder="Enter Master Password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-slate-900/90 border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500 font-mono tracking-widest shadow-inner transition" />
+              <input 
+                type="password" 
+                placeholder="Enter Master Password" 
+                value={passwordInput} 
+                onChange={(e) => setPasswordInput(e.target.value)} 
+                className="w-full pl-11 pr-4 py-3 bg-slate-900/90 border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500 font-mono tracking-widest shadow-inner transition" 
+              />
             </div>
-            <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 active:scale-95 text-slate-950 font-black text-xs rounded-2xl flex items-center justify-center gap-2"><span>Unlock Store Station</span><ArrowRight size={15} /></button>
+            <button 
+              type="submit" 
+              className="w-full py-3.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 active:scale-95 text-slate-950 font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+            >
+              <span>Unlock Store Station</span>
+              <ArrowRight size={15} />
+            </button>
           </form>
+        </div>
+
+        {/* Bottom Tag */}
+        <div className="z-10 text-center pb-2">
+          <p className="text-[10px] text-slate-500 font-bold flex items-center justify-center gap-1">
+            <ShieldCheck size={12} className="text-emerald-400" /> Authorized Admin Terminal
+          </p>
         </div>
       </div>
     );
@@ -286,7 +327,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col max-w-md mx-auto shadow-2xl relative pb-24 font-sans select-none">
       <header className="bg-slate-900/80 backdrop-blur-xl p-4 sticky top-0 z-40 border-b border-slate-800/80 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center"><Package className="text-white" size={20} /></div>
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-md"><Package className="text-white" size={20} /></div>
           <div><div className="flex items-center gap-1.5"><h1 className="text-sm font-black text-white leading-none">BMart Hub</h1></div><p className="text-[10px] text-slate-400 font-semibold mt-0.5">Rural Doorstep Commerce</p></div>
         </div>
         <div className="flex items-center gap-1.5">
@@ -295,7 +336,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* Global Modals */}
+      {/* Global In-App Notifications */}
       {appAlert && (
         <div className="fixed top-20 left-4 right-4 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className={`p-3.5 rounded-2xl shadow-2xl flex items-center justify-between text-white border border-white/10 ${appAlert.type === 'error' ? 'bg-gradient-to-r from-rose-600 to-red-600' : 'bg-gradient-to-r from-emerald-600 to-teal-600'}`}>
@@ -305,6 +346,7 @@ export default function App() {
         </div>
       )}
 
+      {/* Confirmation Modal */}
       {confirmDialog && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl max-w-xs shadow-2xl flex flex-col gap-3 text-center">
@@ -319,7 +361,7 @@ export default function App() {
         </div>
       )}
 
-      {/* CUSTOM STATUS UPDATE MODAL */}
+      {/* Custom Status Modal */}
       {statusModal.isOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-xs rounded-3xl p-5 shadow-2xl flex flex-col gap-3">
@@ -337,7 +379,7 @@ export default function App() {
         </div>
       )}
             <main className="p-4 flex-1">
-        {/* 1. ORDERS VIEW WITH PRODUCT PHOTO AND ITEMS BREAKDOWN */}
+        {/* 1. ORDERS VIEW WITH CLICKABLE ENLARGED PHOTO */}
         {activeTab === 'orders' && (
           <div className="flex flex-col gap-3.5">
             <div className="relative">
@@ -365,7 +407,7 @@ export default function App() {
                     <p className="text-[10px] text-slate-400 leading-relaxed mt-0.5">🏡 {o.full_address}</p>
                   </div>
 
-                  {/* PRODUCT PHOTO & ORDERED ITEMS VIEW */}
+                  {/* PRODUCT ITEMS WITH CLICKABLE PHOTO ZOOM */}
                   <div className="flex flex-col gap-2 bg-slate-950/70 border border-slate-800 rounded-2xl p-3">
                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Order Items ({orderItems.length}):</p>
                     {orderItems.map((it, idx) => (
@@ -373,7 +415,9 @@ export default function App() {
                         <img 
                           src={it.images?.[0] || 'https://via.placeholder.com/60'} 
                           alt={it.title} 
-                          className="w-12 h-12 rounded-xl object-contain bg-slate-900 border border-slate-700/80 shrink-0" 
+                          onClick={() => setSelectedItemPhoto(it.images?.[0] || 'https://via.placeholder.com/60')}
+                          className="w-12 h-12 rounded-xl object-contain bg-slate-900 border border-slate-700/80 shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition" 
+                          title="Badi photo dekhne ke liye tap karein"
                         />
                         <div className="flex-1 min-w-0">
                           <h5 className="font-bold text-xs text-white truncate">{it.title}</h5>
@@ -426,7 +470,7 @@ export default function App() {
             ))}
           </div>
         )}
-                      {/* 3. CATALOG & ADD PRODUCT VIEW */}
+                      {/* 3. CATALOG PRODUCTS VIEW */}
         {activeTab === 'products' && (
           <div className="flex flex-col gap-3.5">
             <div className="flex justify-between items-center px-1">
@@ -442,8 +486,28 @@ export default function App() {
                     <p className="text-slate-400 text-[11px]">₹{p.price} | Del: {p.delivery_days} Days</p>
                   </div>
                   <div className="flex gap-1.5">
-                    <button onClick={() => { setEditingId(p.id); setProdForm({...p}); setActiveTab('add_product'); }} className="p-2.5 text-slate-300 bg-slate-800 rounded-2xl"><Edit3 size={15} /></button>
-                    <button onClick={() => handleDeleteProduct(p.id)} className="p-2.5 text-rose-400 bg-rose-500/10 rounded-2xl"><Trash2 size={15} /></button>
+                    <button 
+                      onClick={() => { 
+                        setEditingId(p.id); 
+                        setProdForm({
+                          ...p,
+                          cancel_hours: p.cancel_hours !== undefined && p.cancel_hours !== null ? String(p.cancel_hours) : '12',
+                          return_days: p.return_days !== undefined && p.return_days !== null ? String(p.return_days) : '7',
+                          delivery_days: p.delivery_days !== undefined && p.delivery_days !== null ? String(p.delivery_days) : '2'
+                        }); 
+                        if (!SYSTEM_CATEGORIES.includes(p.category)) {
+                          setIsCustomCategory(true);
+                          setCustomCategoryText(p.category);
+                        } else {
+                          setIsCustomCategory(false);
+                        }
+                        setActiveTab('add_product'); 
+                      }} 
+                      className="p-2.5 text-slate-300 bg-slate-800 rounded-2xl active:scale-90"
+                    >
+                      <Edit3 size={15} />
+                    </button>
+                    <button onClick={() => handleDeleteProduct(p.id)} className="p-2.5 text-rose-400 bg-rose-500/10 rounded-2xl active:scale-90"><Trash2 size={15} /></button>
                   </div>
                 </div>
               ))}
@@ -469,12 +533,35 @@ export default function App() {
               <div><label className="text-[9px] font-bold text-slate-400">Min Qty *</label><input type="number" value={prodForm.min_quantity} onChange={(e) => setProdForm({ ...prodForm, min_quantity: e.target.value })} className="w-full px-2.5 py-2 text-xs bg-amber-950/40 border border-amber-500/40 rounded-2xl text-amber-300 font-bold" /></div>
             </div>
 
-            {/* Optional Mfg / Expiry for all products */}
+            {/* Fashion Specific Sizes & Fabric */}
+            {(prodForm.category?.includes('Fashion') || customCategoryText.toLowerCase().includes('kapde') || prodForm.category?.includes('Footwear')) && (
+              <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800 grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[9px] font-bold text-slate-400 block mb-1">Sizes (e.g. S, M, L, XL)</label>
+                  <input type="text" placeholder="S, M, L, XL" value={Array.isArray(prodForm.sizes) ? prodForm.sizes.join(', ') : prodForm.sizes} onChange={(e) => setProdForm({ ...prodForm, sizes: e.target.value })} className="w-full px-2.5 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-white outline-none" />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-slate-400 block mb-1">Fabric / Material *</label>
+                  <select value={prodForm.fabric || 'Pure Cotton'} onChange={(e) => setProdForm({ ...prodForm, fabric: e.target.value })} className="w-full px-2.5 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-white font-medium outline-none">
+                    {FABRIC_OPTIONS.map((f, i) => <option key={i} value={f}>{f}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* DD/MM/YYYY Text Date Inputs */}
             <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800 grid grid-cols-2 gap-2">
-              <div><label className="text-[9px] font-bold text-slate-400">Mfg Date (Optional)</label><input type="date" value={prodForm.mfg_date || ''} onChange={(e) => setProdForm({ ...prodForm, mfg_date: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-xl text-white" /></div>
-              <div><label className="text-[9px] font-bold text-slate-400">Expiry Date (Optional)</label><input type="date" value={prodForm.expiry_date || ''} onChange={(e) => setProdForm({ ...prodForm, expiry_date: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-xl text-rose-300 font-bold" /></div>
+              <div>
+                <label className="text-[9px] font-bold text-slate-400 block mb-1">Mfg Date (DD/MM/YYYY)</label>
+                <input type="text" maxLength={10} placeholder="DD/MM/YYYY (e.g. 19/10/2026)" value={prodForm.mfg_date || ''} onChange={(e) => setProdForm({ ...prodForm, mfg_date: e.target.value })} className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-white outline-none font-mono" />
+              </div>
+              <div>
+                <label className="text-[9px] font-bold text-slate-400 block mb-1">Expiry Date (DD/MM/YYYY)</label>
+                <input type="text" maxLength={10} placeholder="DD/MM/YYYY (e.g. 19/10/2027)" value={prodForm.expiry_date || ''} onChange={(e) => setProdForm({ ...prodForm, expiry_date: e.target.value })} className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-rose-300 font-bold outline-none font-mono" />
+              </div>
             </div>
 
+            {/* Delivery, Cancel & Return Inputs */}
             <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 flex flex-col gap-2.5">
               <div><label className="text-[9px] font-bold text-slate-400">Estimated Delivery (Days) *</label><input type="number" min="1" value={prodForm.delivery_days} onChange={(e) => setProdForm({ ...prodForm, delivery_days: e.target.value })} className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-emerald-400 font-bold" /></div>
               <div className="flex items-center gap-2"><input type="number" min="0" placeholder="Cancel Hours" value={prodForm.cancel_hours} onChange={(e) => setProdForm({ ...prodForm, cancel_hours: e.target.value })} className="flex-1 px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-emerald-400 font-bold" /><span className="text-[10px] text-slate-400">Hrs Cancel limit</span></div>
@@ -491,37 +578,18 @@ export default function App() {
           </form>
         )}
 
-        {/* 5. APP SETTINGS VIEW (WHATSAPP, FACEBOOK, INSTAGRAM, PHONE) */}
+        {/* 5. SETTINGS VIEW */}
         {activeTab === 'settings' && (
           <form onSubmit={handleSaveSettings} className="bg-slate-900 p-4 rounded-3xl border border-slate-800 shadow-xl flex flex-col gap-3.5">
             <div className="border-b border-slate-800 pb-2">
               <h3 className="font-black text-xs text-emerald-400 flex items-center gap-1.5"><Settings size={15} /> Customer App Settings</h3>
               <p className="text-[10px] text-slate-400 mt-0.5">Yahan se customer app ke official support links aur number change karein</p>
             </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-300 block mb-1 flex items-center gap-1"><PhoneCall size={12} className="text-emerald-400" /> Support Calling Number</label>
-              <input type="tel" value={settingsForm.support_phone} onChange={(e) => setSettingsForm({ ...settingsForm, support_phone: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white font-mono" />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-300 block mb-1 flex items-center gap-1"><MessageCircle size={12} className="text-emerald-400" /> Official WhatsApp Support Link</label>
-              <input type="text" value={settingsForm.whatsapp_url} onChange={(e) => setSettingsForm({ ...settingsForm, whatsapp_url: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white font-mono text-[11px]" />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-300 block mb-1 flex items-center gap-1"><Facebook size={12} className="text-blue-400" /> Facebook Page URL</label>
-              <input type="text" value={settingsForm.facebook_url} onChange={(e) => setSettingsForm({ ...settingsForm, facebook_url: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white font-mono text-[11px]" />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-300 block mb-1 flex items-center gap-1"><Instagram size={12} className="text-pink-400" /> Instagram Profile URL</label>
-              <input type="text" value={settingsForm.instagram_url} onChange={(e) => setSettingsForm({ ...settingsForm, instagram_url: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white font-mono text-[11px]" />
-            </div>
-
-            <button type="submit" disabled={settingsSaving} className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs rounded-2xl shadow-lg active:scale-95 transition">
-              {settingsSaving ? "Saving to Cloud..." : "Save Settings (Update Customer App)"}
-            </button>
+            <div><label className="text-[10px] font-bold text-slate-300 block mb-1 flex items-center gap-1"><PhoneCall size={12} className="text-emerald-400" /> Support Calling Number</label><input type="tel" value={settingsForm.support_phone} onChange={(e) => setSettingsForm({ ...settingsForm, support_phone: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white font-mono" /></div>
+            <div><label className="text-[10px] font-bold text-slate-300 block mb-1 flex items-center gap-1"><MessageCircle size={12} className="text-emerald-400" /> Official WhatsApp Support Link</label><input type="text" value={settingsForm.whatsapp_url} onChange={(e) => setSettingsForm({ ...settingsForm, whatsapp_url: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white font-mono text-[11px]" /></div>
+            <div><label className="text-[10px] font-bold text-slate-300 block mb-1 flex items-center gap-1"><Facebook size={12} className="text-blue-400" /> Facebook Page URL</label><input type="text" value={settingsForm.facebook_url} onChange={(e) => setSettingsForm({ ...settingsForm, facebook_url: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white font-mono text-[11px]" /></div>
+            <div><label className="text-[10px] font-bold text-slate-300 block mb-1 flex items-center gap-1"><Instagram size={12} className="text-pink-400" /> Instagram Profile URL</label><input type="text" value={settingsForm.instagram_url} onChange={(e) => setSettingsForm({ ...settingsForm, instagram_url: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white font-mono text-[11px]" /></div>
+            <button type="submit" disabled={settingsSaving} className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs rounded-2xl shadow-lg active:scale-95 transition">{settingsSaving ? "Saving..." : "Save Settings (Update Customer App)"}</button>
           </form>
         )}
       </main>
@@ -541,6 +609,24 @@ export default function App() {
               {previewProduct.expiry_date && <div className="flex justify-between"><span>Expiry Date:</span><b className="text-rose-400">{previewProduct.expiry_date}</b></div>}
             </div>
             <button onClick={() => setPreviewProduct(null)} className="w-full py-3 bg-slate-800 text-white rounded-2xl text-xs font-bold">Close Preview</button>
+          </div>
+        </div>
+      )}
+
+      {/* ENLARGED PRODUCT PHOTO POPUP MODAL */}
+      {selectedItemPhoto && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setSelectedItemPhoto(null)}>
+          <div className="bg-slate-900 border border-slate-800 p-4 rounded-3xl max-w-xs shadow-2xl relative" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
+              <span className="text-xs font-black text-slate-200">Ordered Product Photo</span>
+              <button onClick={() => setSelectedItemPhoto(null)} className="p-1 text-slate-400 hover:text-white bg-slate-800 rounded-xl">
+                <X size={15} />
+              </button>
+            </div>
+            <img src={selectedItemPhoto} alt="Product Big View" className="w-full h-auto max-h-[65vh] object-contain rounded-2xl bg-slate-950 border border-slate-800" />
+            <button onClick={() => setSelectedItemPhoto(null)} className="w-full mt-3 py-2.5 bg-slate-800 hover:bg-slate-750 text-white text-xs font-bold rounded-2xl active:scale-95">
+              Band Karein
+            </button>
           </div>
         </div>
       )}
@@ -601,7 +687,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Modern 4-Tab Bottom App Dock (Includes Settings Tab) */}
+      {/* Modern 4-Tab Bottom App Dock */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/90 backdrop-blur-2xl border-t border-slate-800/80 flex justify-around py-2.5 z-40 text-slate-400 shadow-2xl">
         <button onClick={() => setActiveTab('orders')} className={`flex flex-col items-center gap-1 relative px-3 py-1 rounded-2xl transition ${activeTab === 'orders' ? 'text-emerald-400 font-black' : 'hover:text-slate-200'}`}>
           <Package size={20} className={activeTab === 'orders' ? 'drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : ''} />
@@ -627,13 +713,14 @@ export default function App() {
       </nav>
     </div>
   );
-          }
-      
-                            
-                            
-              
-  
-        
+                                                                                                                     }
+            
+                
+                    
       
   
+    
   
+  
+  
+
