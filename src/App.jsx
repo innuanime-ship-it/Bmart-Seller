@@ -8,10 +8,7 @@ import {
   Calendar, Layers, Tag, EyeOff, Check, Sliders, ShieldCheck
 } from 'lucide-react';
 
-const ADMIN_SECRET_HASH = "IN1511RNB2008";
-
-
-};
+const ADMIN_PASS = "IN1511RNB2008";
 
 const SYSTEM_CATEGORIES = [
   "Fashion (Kapde)",
@@ -183,23 +180,21 @@ export default function App() {
     }
   };
 
-  const handleLogin = async (e) => {
+  // Seedha Master Password Check
+  const handleLogin = (e) => {
     e.preventDefault();
     const clean = passwordInput.trim();
-    if (!clean) return showNotification("Error", "Password enter karein!", "error");
+    if (!clean) {
+      return showNotification("Error", "Password enter karein!", "error");
+    }
 
-    try {
-      const hashed = await computeSha256(clean);
-      if (hashed === ADMIN_SECRET_HASH) {
-        setIsAuthenticated(true);
-        localStorage.setItem('bmart_seller_logged', 'true');
-        setPasswordInput('');
-        showNotification("Swagat Hai!", "BMart Seller App me login safal raha.", "success");
-      } else {
-        showNotification("Access Denied", "Galat Master Password!", "error");
-      }
-    } catch (err) {
-      showNotification("Error", "Crypto verification me dikkat aayi.", "error");
+    if (clean === ADMIN_PASS || clean.toUpperCase() === ADMIN_PASS) {
+      setIsAuthenticated(true);
+      localStorage.setItem('bmart_seller_logged', 'true');
+      setPasswordInput('');
+      showNotification("Swagat Hai!", "BMart Seller App me login safal raha.", "success");
+    } else {
+      showNotification("Access Denied", "Galat Master Password!", "error");
     }
   };
 
@@ -220,7 +215,7 @@ export default function App() {
         .eq('id', id);
 
       if (error) {
-        showNotification("Delete Blocked", "Supabase policy error: " + error.message, "error");
+        showNotification("Delete Blocked", "Supabase error: " + error.message, "error");
       } else {
         setProducts((prev) => prev.filter((p) => p.id !== id));
         showNotification("Deleted!", "Product permanently delete ho gaya.", "success");
@@ -1110,14 +1105,14 @@ export default function App() {
       </nav>
     </div>
   );
-                  }
-          
+      }
       
-                                          
-                        
+      
+                
                     
+                        
   
-    
       
-  
+
     
+
