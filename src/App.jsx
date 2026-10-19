@@ -6,39 +6,21 @@ import {
   LogOut, Shield, Search, Printer, ChevronRight, AlertCircle,
   Settings, PhoneCall, MessageCircle, ArrowLeft, Eye, Copy, QrCode, X, Sparkles,
   Calendar, Layers, Tag, EyeOff, Check, Sliders, ShieldCheck, Lock, ArrowRight,
-  MessageSquare, Image as ImageIcon
+  MessageSquare, Image as ImageIcon, Facebook, Instagram
 } from 'lucide-react';
 
 const ADMIN_PASS = "IN1511RNB2008";
 
 const SYSTEM_CATEGORIES = [
-  "Fashion (Kapde)",
-  "Footwear (Joote / Chappal)",
-  "Groceries (Rashan / Kirana)",
-  "Beauty & Personal Care",
-  "Electronics & Mobile Accessories",
-  "Kitchen & Home Appliances",
-  "Baby Care & Toys",
-  "Stationery & Books",
-  "Agriculture / Kheti-Badi Seeds & Tools",
-  "Pooja Samagri & Festives",
-  "Hardware & Tools",
-  "Custom / Nayi Category Likhein"
+  "Fashion (Kapde)", "Footwear (Joote / Chappal)", "Groceries (Rashan / Kirana)",
+  "Beauty & Personal Care", "Electronics & Mobile Accessories", "Kitchen & Home Appliances",
+  "Baby Care & Toys", "Stationery & Books", "Agriculture / Kheti-Badi Seeds & Tools",
+  "Pooja Samagri & Festives", "Hardware & Tools", "Custom / Nayi Category Likhein"
 ];
 
 const FABRIC_OPTIONS = [
-  "Pure Cotton",
-  "Linen (Lenin)",
-  "Denim / Jeans",
-  "Silk",
-  "Rayon",
-  "Polyester",
-  "Chiffon",
-  "Georgette",
-  "Woolen (Garam Kapda)",
-  "Nylon",
-  "Cotton Blend / Mixed",
-  "Other Fabric"
+  "Pure Cotton", "Linen (Lenin)", "Denim / Jeans", "Silk", "Rayon", "Polyester",
+  "Chiffon", "Georgette", "Woolen (Garam Kapda)", "Nylon", "Cotton Blend / Mixed", "Other Fabric"
 ];
 
 const getDynamicDate = (days) => {
@@ -75,7 +57,7 @@ export default function App() {
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('bmart_seller_logged') === 'true');
   const [passwordInput, setPasswordInput] = useState('');
-  const [activeTab, setActiveTab] = useState('orders');
+  const [activeTab, setActiveTab] = useState('orders'); // 'orders' | 'returns' | 'products' | 'add_product' | 'settings'
 
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
@@ -258,7 +240,7 @@ export default function App() {
     try {
       const { error } = await supabase.from('app_settings').upsert([{ id: 1, ...settingsForm }]);
       if (error) throw error;
-      showNotification("Success", "Settings update ho gaye!", "success");
+      showNotification("Success", "Customer App ke Social Links aur Support Phone update ho gaye!", "success");
     } catch (err) {
       showNotification("Error", err.message, "error");
     } finally {
@@ -313,7 +295,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* Global In-App Alert */}
+      {/* Global Modals */}
       {appAlert && (
         <div className="fixed top-20 left-4 right-4 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className={`p-3.5 rounded-2xl shadow-2xl flex items-center justify-between text-white border border-white/10 ${appAlert.type === 'error' ? 'bg-gradient-to-r from-rose-600 to-red-600' : 'bg-gradient-to-r from-emerald-600 to-teal-600'}`}>
@@ -323,7 +305,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Global In-App Confirm Dialog */}
       {confirmDialog && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl max-w-xs shadow-2xl flex flex-col gap-3 text-center">
@@ -356,45 +337,83 @@ export default function App() {
         </div>
       )}
             <main className="p-4 flex-1">
-        {/* ORDERS VIEW */}
+        {/* 1. ORDERS VIEW WITH PRODUCT PHOTO AND ITEMS BREAKDOWN */}
         {activeTab === 'orders' && (
           <div className="flex flex-col gap-3.5">
             <div className="relative">
               <Search className="absolute left-3.5 top-3 text-slate-400" size={15} />
-              <input type="text" placeholder="Search Order ID..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-2xl text-xs text-white outline-none focus:border-emerald-500" />
+              <input type="text" placeholder="Search Order ID, Customer Name..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-2xl text-xs text-white outline-none focus:border-emerald-500" />
             </div>
-            {filteredOrders.map((o) => (
-              <div key={o.id} className="bg-gradient-to-b from-slate-900 to-slate-900/90 border border-slate-800/80 rounded-3xl p-4 shadow-xl flex flex-col gap-3">
-                <div className="flex justify-between items-start border-b border-slate-800/60 pb-2.5">
-                  <div>
-                    <span className="font-black text-xs text-emerald-400">#{o.id}</span>
-                    <p className="text-[10px] text-slate-400 mt-1">{new Date(o.created_at).toLocaleString('en-IN')}</p>
+            {filteredOrders.map((o) => {
+              const orderItems = (Array.isArray(o.items) ? o.items : (typeof o.items === 'string' ? JSON.parse(o.items || '[]') : []));
+              return (
+                <div key={o.id} className="bg-gradient-to-b from-slate-900 to-slate-900/90 border border-slate-800/80 rounded-3xl p-4 shadow-xl flex flex-col gap-3">
+                  <div className="flex justify-between items-start border-b border-slate-800/60 pb-2.5">
+                    <div>
+                      <span className="font-black text-xs text-emerald-400 tracking-wider">#{o.id}</span>
+                      <p className="text-[10px] text-slate-400 mt-1">{new Date(o.created_at).toLocaleString('en-IN')}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-black px-2.5 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/15 text-emerald-300">{o.status || 'Placed'}</span>
+                      {o.status_time && <p className="text-[9px] text-slate-500 mt-1">Status changed at:<br/>{new Date(o.status_time).toLocaleString('en-IN')}</p>}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-black px-2.5 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/15 text-emerald-300">{o.status || 'Placed'}</span>
-                    {o.status_time && <p className="text-[9px] text-slate-500 mt-1">Updated at:<br/>{new Date(o.status_time).toLocaleString('en-IN')}</p>}
+
+                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-xs">
+                    <p className="font-black text-sm text-white">{o.customer_name}</p>
+                    <p className="text-slate-400 text-[11px] font-medium">📞 {o.customer_phone}</p>
+                    <p className="text-[10px] text-slate-400 leading-relaxed mt-0.5">🏡 {o.full_address}</p>
+                  </div>
+
+                  {/* PRODUCT PHOTO & ORDERED ITEMS VIEW */}
+                  <div className="flex flex-col gap-2 bg-slate-950/70 border border-slate-800 rounded-2xl p-3">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Order Items ({orderItems.length}):</p>
+                    {orderItems.map((it, idx) => (
+                      <div key={idx} className="flex items-center gap-3 py-1.5 border-b border-slate-800/80 last:border-none">
+                        <img 
+                          src={it.images?.[0] || 'https://via.placeholder.com/60'} 
+                          alt={it.title} 
+                          className="w-12 h-12 rounded-xl object-contain bg-slate-900 border border-slate-700/80 shrink-0" 
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h5 className="font-bold text-xs text-white truncate">{it.title}</h5>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Size: <span className="text-slate-200 font-bold">{it.size || 'Std'}</span> | Qty: <span className="text-emerald-400 font-bold">{it.quantity || 1}</span></p>
+                        </div>
+                        <span className="text-xs font-black text-white">₹{it.price * (it.quantity || 1)}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-between text-xs px-1">
+                    <span className="text-slate-400">Adv Fee: <b className="text-emerald-400 font-bold">₹{o.delivery_fee_paid || 0}</b></span>
+                    <span className="text-slate-400">COD Due: <b className="text-white font-black text-sm">₹{o.total_price || 0}</b></span>
+                  </div>
+
+                  {o.status_msg && (
+                    <div className="p-2.5 bg-blue-950/30 border border-blue-500/30 rounded-xl text-[10px] text-blue-300">
+                      <span className="font-bold">Message Sent:</span> {o.status_msg}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => { setHideItemInPrint(false); setPrintOrder(o); }} className="flex-1 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-2xl text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-95"><Printer size={14} /> Print Label</button>
+                    <button onClick={() => handleDeleteOrder(o.id)} className="px-3.5 py-2 bg-rose-500/10 text-rose-400 rounded-2xl text-xs font-bold flex items-center gap-1 active:scale-95"><Trash2 size={14} /> Delete</button>
+                    {o.screenshot && <button onClick={() => setSelectedScreenshot(o.screenshot)} className="px-3 py-2 bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 rounded-2xl text-xs font-bold active:scale-95">Slip</button>}
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-800/80">
+                    <button onClick={() => setStatusModal({ isOpen: true, orderId: o.id, newStatus: 'Processing', message: '' })} className="py-1.5 bg-amber-500/10 text-amber-300 border border-amber-500/20 rounded-xl text-[10px] font-black">Process</button>
+                    <button onClick={() => setStatusModal({ isOpen: true, orderId: o.id, newStatus: 'Shipped', message: '' })} className="py-1.5 bg-blue-500/10 text-blue-300 border border-blue-500/20 rounded-xl text-[10px] font-black">Ship</button>
+                    <button onClick={() => setStatusModal({ isOpen: true, orderId: o.id, newStatus: 'Delivered', message: '' })} className="py-1.5 bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 rounded-xl text-[10px] font-black">Deliver</button>
+                    <button onClick={() => setStatusModal({ isOpen: true, orderId: o.id, newStatus: 'Cancelled', message: '' })} className="py-1.5 bg-rose-500/10 text-rose-300 border border-rose-500/20 rounded-xl text-[10px] font-black">Cancel</button>
                   </div>
                 </div>
-                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-xs"><p className="font-black text-sm text-white">{o.customer_name}</p><p className="text-slate-400 text-[11px] font-medium">📞 {o.customer_phone}</p><p className="text-[10px] text-slate-400 leading-relaxed mt-0.5">🏡 {o.full_address}</p></div>
-                <div className="flex justify-between text-xs px-1"><span className="text-slate-400">Adv: <b className="text-emerald-400 font-bold">₹{o.delivery_fee_paid || 0}</b></span><span className="text-slate-400">COD Due: <b className="text-white font-black text-sm">₹{o.total_price || 0}</b></span></div>
-                {o.status_msg && <div className="p-2 bg-blue-900/20 border border-blue-500/30 rounded-xl text-[10px] text-blue-300"><span className="font-bold">Your Msg:</span> {o.status_msg}</div>}
-                <div className="flex gap-2 pt-1">
-                  <button onClick={() => { setHideItemInPrint(false); setPrintOrder(o); }} className="flex-1 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-2xl text-xs font-black"><Printer size={14} className="inline mr-1" />Print</button>
-                  <button onClick={() => handleDeleteOrder(o.id)} className="px-3.5 py-2 bg-rose-500/10 text-rose-400 rounded-2xl text-xs font-bold"><Trash2 size={14} className="inline mr-1" />Delete</button>
-                  {o.screenshot && <button onClick={() => setSelectedScreenshot(o.screenshot)} className="px-3 py-2 bg-emerald-500/10 text-emerald-300 rounded-2xl text-xs font-bold">Slip</button>}
-                </div>
-                <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-800/80">
-                  <button onClick={() => setStatusModal({ isOpen: true, orderId: o.id, newStatus: 'Processing', message: '' })} className="py-1.5 bg-amber-500/10 text-amber-300 rounded-xl text-[10px] font-black">Process</button>
-                  <button onClick={() => setStatusModal({ isOpen: true, orderId: o.id, newStatus: 'Shipped', message: '' })} className="py-1.5 bg-blue-500/10 text-blue-300 rounded-xl text-[10px] font-black">Ship</button>
-                  <button onClick={() => setStatusModal({ isOpen: true, orderId: o.id, newStatus: 'Delivered', message: '' })} className="py-1.5 bg-emerald-500/10 text-emerald-300 rounded-xl text-[10px] font-black">Deliver</button>
-                  <button onClick={() => setStatusModal({ isOpen: true, orderId: o.id, newStatus: 'Cancelled', message: '' })} className="py-1.5 bg-rose-500/10 text-rose-300 rounded-xl text-[10px] font-black">Cancel</button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        {/* RETURNS VIEW */}
+        {/* 2. RETURNS VIEW */}
         {activeTab === 'returns' && (
           <div className="flex flex-col gap-3.5">
             {returnRequests.map((o) => (
@@ -407,69 +426,106 @@ export default function App() {
             ))}
           </div>
         )}
-                      {/* ADD PRODUCT FORM */}
-        {(activeTab === 'add_product' || activeTab === 'products') && (
+                      {/* 3. CATALOG & ADD PRODUCT VIEW */}
+        {activeTab === 'products' && (
           <div className="flex flex-col gap-3.5">
-            {activeTab === 'products' ? (
-              <>
-                <div className="flex justify-between items-center"><h3 className="text-xs font-black text-white">Catalog</h3><button onClick={() => { setEditingId(null); setActiveTab('add_product'); }} className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 text-xs font-black rounded-2xl"><PlusCircle size={15} className="inline mr-1"/> Add Item</button></div>
-                {products.map((p) => (
-                  <div key={p.id} className="bg-slate-900 border border-slate-800 p-3.5 rounded-3xl flex gap-3.5 items-center">
-                    <img src={p.images?.[0]} onClick={() => setPreviewProduct(p)} className="w-16 h-16 rounded-2xl object-cover bg-slate-950 border border-slate-800" alt="p" />
-                    <div className="flex-1 min-w-0 text-xs" onClick={() => setPreviewProduct(p)}>
-                      <h4 className="font-bold text-white truncate">{p.title}</h4>
-                      <p className="text-slate-400 text-[11px]">₹{p.price} | Del: {p.delivery_days} Days</p>
-                    </div>
+            <div className="flex justify-between items-center px-1">
+              <div><h3 className="text-xs font-black text-white">Catalog</h3><p className="text-[10px] text-slate-400">{products.length} products</p></div>
+              <button onClick={() => { setEditingId(null); setIsCustomCategory(false); setActiveTab('add_product'); }} className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 text-xs font-black rounded-2xl flex items-center gap-1.5 shadow-lg active:scale-95"><PlusCircle size={15} /> Add Item</button>
+            </div>
+            <div className="grid grid-cols-1 gap-2.5">
+              {products.map((p) => (
+                <div key={p.id} className="bg-slate-900 border border-slate-800 p-3.5 rounded-3xl flex gap-3.5 items-center">
+                  <img src={p.images?.[0] || 'https://via.placeholder.com/60'} alt={p.title} onClick={() => setPreviewProduct(p)} className="w-16 h-16 rounded-2xl object-cover bg-slate-950 border border-slate-800 cursor-pointer" />
+                  <div className="flex-1 min-w-0 text-xs cursor-pointer" onClick={() => setPreviewProduct(p)}>
+                    <h4 className="font-bold text-white truncate flex items-center gap-1.5">{p.title} <Eye size={13} className="text-slate-400" /></h4>
+                    <p className="text-slate-400 text-[11px]">₹{p.price} | Del: {p.delivery_days} Days</p>
+                  </div>
+                  <div className="flex gap-1.5">
                     <button onClick={() => { setEditingId(p.id); setProdForm({...p}); setActiveTab('add_product'); }} className="p-2.5 text-slate-300 bg-slate-800 rounded-2xl"><Edit3 size={15} /></button>
                     <button onClick={() => handleDeleteProduct(p.id)} className="p-2.5 text-rose-400 bg-rose-500/10 rounded-2xl"><Trash2 size={15} /></button>
                   </div>
-                ))}
-              </>
-            ) : (
-              <form onSubmit={handleSaveProduct} className="bg-slate-900 p-4 rounded-3xl border border-slate-800 flex flex-col gap-3.5">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-2.5"><h3 className="font-black text-xs text-emerald-400">Product Details</h3><button type="button" onClick={() => setActiveTab('products')} className="text-xs font-bold text-slate-400 bg-slate-800 px-2.5 py-1 rounded-xl">Cancel</button></div>
-                <input type="text" placeholder="Product Title *" value={prodForm.title} onChange={(e) => setProdForm({ ...prodForm, title: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white outline-none" />
-                <textarea placeholder="Product Description..." value={prodForm.description} onChange={(e) => setProdForm({ ...prodForm, description: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white outline-none" rows={2} />
-                
-                <select value={isCustomCategory ? "Custom / Nayi Category Likhein" : prodForm.category} onChange={(e) => { if (e.target.value === "Custom / Nayi Category Likhein") setIsCustomCategory(true); else { setIsCustomCategory(false); setProdForm({ ...prodForm, category: e.target.value }); } }} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white font-medium outline-none">
-                  {SYSTEM_CATEGORIES.map((c, i) => <option key={i} value={c}>{c}</option>)}
-                </select>
-                {isCustomCategory && (
-                  <input type="text" placeholder="Nayi Category ka naam likhein..." value={customCategoryText} onChange={(e) => setCustomCategoryText(e.target.value)} className="w-full px-3 py-2 text-xs bg-slate-950 border border-emerald-500 rounded-xl text-white" />
-                )}
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div><label className="text-[9px] font-bold text-slate-400">Price (₹) *</label><input type="number" value={prodForm.price} onChange={(e) => setProdForm({ ...prodForm, price: e.target.value })} className="w-full px-2.5 py-2 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-emerald-400 font-bold" /></div>
-                  <div><label className="text-[9px] font-bold text-slate-400">MRP (₹)</label><input type="number" value={prodForm.mrp} onChange={(e) => setProdForm({ ...prodForm, mrp: e.target.value })} className="w-full px-2.5 py-2 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-slate-300" /></div>
-                  <div><label className="text-[9px] font-bold text-slate-400">Min Qty *</label><input type="number" value={prodForm.min_quantity} onChange={(e) => setProdForm({ ...prodForm, min_quantity: e.target.value })} className="w-full px-2.5 py-2 text-xs bg-amber-950/40 border border-amber-500/40 rounded-2xl text-amber-300 font-bold" /></div>
                 </div>
-
-                {/* Expiry & Fabric Logic */}
-                <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800 grid grid-cols-2 gap-2">
-                  <div><label className="text-[9px] font-bold text-slate-400">Mfg Date (Optional)</label><input type="date" value={prodForm.mfg_date || ''} onChange={(e) => setProdForm({ ...prodForm, mfg_date: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-xl text-white" /></div>
-                  <div><label className="text-[9px] font-bold text-slate-400">Expiry Date (Optional)</label><input type="date" value={prodForm.expiry_date || ''} onChange={(e) => setProdForm({ ...prodForm, expiry_date: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-xl text-rose-300 font-bold" /></div>
-                </div>
-
-                <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 flex flex-col gap-2.5">
-                  <div><label className="text-[9px] font-bold text-slate-400">Estimated Delivery (Days) *</label><input type="number" min="1" value={prodForm.delivery_days} onChange={(e) => setProdForm({ ...prodForm, delivery_days: e.target.value })} className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-emerald-400 font-bold" /></div>
-                  <div className="flex items-center gap-2"><input type="number" min="0" placeholder="Cancel Hours" value={prodForm.cancel_hours} onChange={(e) => setProdForm({ ...prodForm, cancel_hours: e.target.value })} className="flex-1 px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-emerald-400 font-bold" /><span className="text-[10px] text-slate-400">Hrs Cancel limit</span></div>
-                  <div className="flex items-center gap-2"><input type="number" min="0" placeholder="Return Days" value={prodForm.return_days} onChange={(e) => setProdForm({ ...prodForm, return_days: e.target.value })} className="flex-1 px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-emerald-400 font-bold" /><span className="text-[10px] text-slate-400">Days Return limit</span></div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div><label className="text-[9px] font-bold text-slate-400">Adv Fee (₹)</label><input type="number" value={prodForm.delivery_fee} onChange={(e) => setProdForm({ ...prodForm, delivery_fee: e.target.value })} className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white" /></div>
-                  <div><label className="text-[9px] font-bold text-slate-400">UPI ID</label><input type="text" value={prodForm.upi_id} onChange={(e) => setProdForm({ ...prodForm, upi_id: e.target.value })} className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white font-mono" /></div>
-                </div>
-
-                <label className="p-4 border-2 border-dashed border-emerald-500/40 rounded-3xl text-center text-xs text-emerald-400 font-bold bg-emerald-950/20 active:scale-95 transition">Upload Photos ({prodForm.images?.length || 0}) <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} /></label>
-                <button type="submit" disabled={loading} className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs rounded-2xl active:scale-95">{loading ? "Saving..." : "Save Product"}</button>
-              </form>
-            )}
+              ))}
+            </div>
           </div>
         )}
-                    </main>
 
-      {/* BIG PRODUCT PREVIEW MODAL */}
+        {/* 4. ADD / EDIT PRODUCT FORM */}
+        {activeTab === 'add_product' && (
+          <form onSubmit={handleSaveProduct} className="bg-slate-900 p-4 rounded-3xl border border-slate-800 flex flex-col gap-3.5">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2.5"><h3 className="font-black text-xs text-emerald-400">Product Details</h3><button type="button" onClick={() => setActiveTab('products')} className="text-xs font-bold text-slate-400 bg-slate-800 px-2.5 py-1 rounded-xl">Cancel</button></div>
+            <input type="text" placeholder="Product Title *" value={prodForm.title} onChange={(e) => setProdForm({ ...prodForm, title: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white outline-none" />
+            <textarea placeholder="Product Description..." value={prodForm.description} onChange={(e) => setProdForm({ ...prodForm, description: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white outline-none" rows={2} />
+            
+            <select value={isCustomCategory ? "Custom / Nayi Category Likhein" : prodForm.category} onChange={(e) => { if (e.target.value === "Custom / Nayi Category Likhein") setIsCustomCategory(true); else { setIsCustomCategory(false); setProdForm({ ...prodForm, category: e.target.value }); } }} className="w-full px-3 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white outline-none">
+              {SYSTEM_CATEGORIES.map((c, i) => <option key={i} value={c}>{c}</option>)}
+            </select>
+            {isCustomCategory && <input type="text" placeholder="Custom Category Name..." value={customCategoryText} onChange={(e) => setCustomCategoryText(e.target.value)} className="w-full px-3 py-2 text-xs bg-slate-950 border border-emerald-500 rounded-xl text-white" />}
+
+            <div className="grid grid-cols-3 gap-2">
+              <div><label className="text-[9px] font-bold text-slate-400">Price (₹) *</label><input type="number" value={prodForm.price} onChange={(e) => setProdForm({ ...prodForm, price: e.target.value })} className="w-full px-2.5 py-2 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-emerald-400 font-bold" /></div>
+              <div><label className="text-[9px] font-bold text-slate-400">MRP (₹)</label><input type="number" value={prodForm.mrp} onChange={(e) => setProdForm({ ...prodForm, mrp: e.target.value })} className="w-full px-2.5 py-2 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-slate-300" /></div>
+              <div><label className="text-[9px] font-bold text-slate-400">Min Qty *</label><input type="number" value={prodForm.min_quantity} onChange={(e) => setProdForm({ ...prodForm, min_quantity: e.target.value })} className="w-full px-2.5 py-2 text-xs bg-amber-950/40 border border-amber-500/40 rounded-2xl text-amber-300 font-bold" /></div>
+            </div>
+
+            {/* Optional Mfg / Expiry for all products */}
+            <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800 grid grid-cols-2 gap-2">
+              <div><label className="text-[9px] font-bold text-slate-400">Mfg Date (Optional)</label><input type="date" value={prodForm.mfg_date || ''} onChange={(e) => setProdForm({ ...prodForm, mfg_date: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-xl text-white" /></div>
+              <div><label className="text-[9px] font-bold text-slate-400">Expiry Date (Optional)</label><input type="date" value={prodForm.expiry_date || ''} onChange={(e) => setProdForm({ ...prodForm, expiry_date: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-xl text-rose-300 font-bold" /></div>
+            </div>
+
+            <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 flex flex-col gap-2.5">
+              <div><label className="text-[9px] font-bold text-slate-400">Estimated Delivery (Days) *</label><input type="number" min="1" value={prodForm.delivery_days} onChange={(e) => setProdForm({ ...prodForm, delivery_days: e.target.value })} className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-emerald-400 font-bold" /></div>
+              <div className="flex items-center gap-2"><input type="number" min="0" placeholder="Cancel Hours" value={prodForm.cancel_hours} onChange={(e) => setProdForm({ ...prodForm, cancel_hours: e.target.value })} className="flex-1 px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-emerald-400 font-bold" /><span className="text-[10px] text-slate-400">Hrs Cancel limit</span></div>
+              <div className="flex items-center gap-2"><input type="number" min="0" placeholder="Return Days" value={prodForm.return_days} onChange={(e) => setProdForm({ ...prodForm, return_days: e.target.value })} className="flex-1 px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-emerald-400 font-bold" /><span className="text-[10px] text-slate-400">Days Return limit</span></div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div><label className="text-[9px] font-bold text-slate-400">Adv Fee (₹)</label><input type="number" value={prodForm.delivery_fee} onChange={(e) => setProdForm({ ...prodForm, delivery_fee: e.target.value })} className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white" /></div>
+              <div><label className="text-[9px] font-bold text-slate-400">UPI ID</label><input type="text" value={prodForm.upi_id} onChange={(e) => setProdForm({ ...prodForm, upi_id: e.target.value })} className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white font-mono" /></div>
+            </div>
+
+            <label className="p-4 border-2 border-dashed border-emerald-500/40 rounded-3xl text-center text-xs text-emerald-400 font-bold bg-emerald-950/20 active:scale-95 transition">Upload Photos ({prodForm.images?.length || 0}) <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} /></label>
+            <button type="submit" disabled={loading} className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs rounded-2xl active:scale-95">{loading ? "Saving..." : "Save Product"}</button>
+          </form>
+        )}
+
+        {/* 5. APP SETTINGS VIEW (WHATSAPP, FACEBOOK, INSTAGRAM, PHONE) */}
+        {activeTab === 'settings' && (
+          <form onSubmit={handleSaveSettings} className="bg-slate-900 p-4 rounded-3xl border border-slate-800 shadow-xl flex flex-col gap-3.5">
+            <div className="border-b border-slate-800 pb-2">
+              <h3 className="font-black text-xs text-emerald-400 flex items-center gap-1.5"><Settings size={15} /> Customer App Settings</h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">Yahan se customer app ke official support links aur number change karein</p>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-slate-300 block mb-1 flex items-center gap-1"><PhoneCall size={12} className="text-emerald-400" /> Support Calling Number</label>
+              <input type="tel" value={settingsForm.support_phone} onChange={(e) => setSettingsForm({ ...settingsForm, support_phone: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white font-mono" />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-slate-300 block mb-1 flex items-center gap-1"><MessageCircle size={12} className="text-emerald-400" /> Official WhatsApp Support Link</label>
+              <input type="text" value={settingsForm.whatsapp_url} onChange={(e) => setSettingsForm({ ...settingsForm, whatsapp_url: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white font-mono text-[11px]" />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-slate-300 block mb-1 flex items-center gap-1"><Facebook size={12} className="text-blue-400" /> Facebook Page URL</label>
+              <input type="text" value={settingsForm.facebook_url} onChange={(e) => setSettingsForm({ ...settingsForm, facebook_url: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white font-mono text-[11px]" />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-slate-300 block mb-1 flex items-center gap-1"><Instagram size={12} className="text-pink-400" /> Instagram Profile URL</label>
+              <input type="text" value={settingsForm.instagram_url} onChange={(e) => setSettingsForm({ ...settingsForm, instagram_url: e.target.value })} className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-2xl text-white font-mono text-[11px]" />
+            </div>
+
+            <button type="submit" disabled={settingsSaving} className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs rounded-2xl shadow-lg active:scale-95 transition">
+              {settingsSaving ? "Saving to Cloud..." : "Save Settings (Update Customer App)"}
+            </button>
+          </form>
+        )}
+      </main>
+            {/* BIG PRODUCT PREVIEW MODAL */}
       {previewProduct && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-3xl p-5 shadow-2xl flex flex-col gap-3.5">
@@ -483,10 +539,6 @@ export default function App() {
               <div className="flex justify-between"><span>Estimated Delivery:</span><b className="text-blue-400">By {getDynamicDate(previewProduct.delivery_days || 2)}</b></div>
               {previewProduct.mfg_date && <div className="flex justify-between"><span>Mfg Date:</span><b>{previewProduct.mfg_date}</b></div>}
               {previewProduct.expiry_date && <div className="flex justify-between"><span>Expiry Date:</span><b className="text-rose-400">{previewProduct.expiry_date}</b></div>}
-              <div className="flex justify-between border-t border-slate-800 pt-2 text-[11px] text-slate-400">
-                <span>Cancel: {Number(previewProduct.cancel_hours || 0) > 0 ? `${previewProduct.cancel_hours} Hrs` : 'No'}</span>
-                <span>Return: {Number(previewProduct.return_days || 0) > 0 ? `${previewProduct.return_days} Days` : 'No'}</span>
-              </div>
             </div>
             <button onClick={() => setPreviewProduct(null)} className="w-full py-3 bg-slate-800 text-white rounded-2xl text-xs font-bold">Close Preview</button>
           </div>
@@ -502,7 +554,7 @@ export default function App() {
               <button onClick={() => setHideItemInPrint(!hideItemInPrint)} className={`px-3 py-1 rounded-xl text-[10px] font-black ${hideItemInPrint ? 'bg-rose-600 text-white' : 'bg-slate-200 text-slate-800'}`}>{hideItemInPrint ? "Hidden" : "Show Name"}</button>
             </div>
             <div id="printable-sticker" className="border-2 border-dashed border-slate-900 p-3.5 rounded-2xl bg-white font-sans">
-              <div className="border-b-2 border-slate-900 pb-2 mb-2 flex justify-between items-center">
+              <div className="border-b-2 border-slate-900 pb-2 mb-2 flex justify-between">
                 <div><h2 className="text-base font-black text-red-700">BARIJAN MART</h2></div>
                 <div className="text-right"><span className="text-[9px] font-black border border-slate-900 px-1 py-0.5 rounded bg-slate-100">EXP-PARCEL</span></div>
               </div>
@@ -513,7 +565,7 @@ export default function App() {
               </div>
               <div className="border-b border-slate-300 pb-2 mb-2 text-xs">
                 <span className="text-[8px] font-black text-slate-500 uppercase block mb-0.5">CONTENTS:</span>
-                {hideItemInPrint ? <div className="p-1.5 bg-slate-100 rounded text-[9px] font-mono font-bold text-slate-600 text-center">🔒 CONFIDENTIAL PARCEL</div> : printOrder.items?.map((it, idx) => (
+                {hideItemInPrint ? <div className="p-1.5 bg-slate-100 rounded text-[9px] font-mono font-bold text-slate-600 text-center">🔒 CONFIDENTIAL PARCEL</div> : (Array.isArray(printOrder.items) ? printOrder.items : JSON.parse(printOrder.items || '[]')).map((it, idx) => (
                   <div key={idx} className="flex justify-between text-[9px] py-0.5 font-medium"><span className="truncate max-w-[170px]">{it.title}</span><span className="font-black">Qty: {it.quantity || 1}</span></div>
                 ))}
               </div>
@@ -534,35 +586,54 @@ export default function App() {
         <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4" onClick={() => setSelectedScreenshot(null)}>
           <div className="bg-slate-900 border border-slate-800 p-4 rounded-3xl max-w-xs shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <img src={selectedScreenshot} alt="Slip" className="w-full h-auto object-contain rounded-2xl max-h-[70vh]" />
-            <button onClick={() => setSelectedScreenshot(null)} className="w-full mt-3 py-2.5 bg-slate-800 text-white text-xs font-bold rounded-2xl">Band Karein</button>
+            <button onClick={() => setSelectedScreenshot(null)} className="w-full mt-3 py-2.5 bg-slate-800 text-white text-xs font-bold rounded-2xl">Close</button>
           </div>
         </div>
       )}
 
-      {/* Modern App Bottom Navigation */}
+      {selectedDamagePhoto && (
+        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4" onClick={() => setSelectedDamagePhoto(null)}>
+          <div className="bg-slate-900 border border-rose-500/30 p-4 rounded-3xl max-w-xs shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <p className="text-xs font-black text-rose-400 mb-2">Damage Item Photo:</p>
+            <img src={selectedDamagePhoto} alt="Damage" className="w-full h-auto object-contain rounded-2xl max-h-[70vh]" />
+            <button onClick={() => setSelectedDamagePhoto(null)} className="w-full mt-3 py-2.5 bg-rose-600 text-white text-xs font-bold rounded-2xl">Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* Modern 4-Tab Bottom App Dock (Includes Settings Tab) */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/90 backdrop-blur-2xl border-t border-slate-800/80 flex justify-around py-2.5 z-40 text-slate-400 shadow-2xl">
         <button onClick={() => setActiveTab('orders')} className={`flex flex-col items-center gap-1 relative px-3 py-1 rounded-2xl transition ${activeTab === 'orders' ? 'text-emerald-400 font-black' : 'hover:text-slate-200'}`}>
-          <Package size={20} />
+          <Package size={20} className={activeTab === 'orders' ? 'drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : ''} />
           <span className="text-[10px]">Orders</span>
+          {normalOrders.length > 0 && <span className="absolute -top-1 -right-0.5 bg-emerald-500 text-slate-950 text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow">{normalOrders.length}</span>}
         </button>
+
         <button onClick={() => setActiveTab('returns')} className={`flex flex-col items-center gap-1 relative px-3 py-1 rounded-2xl transition ${activeTab === 'returns' ? 'text-rose-400 font-black' : 'hover:text-slate-200'}`}>
-          <RefreshCw size={20} />
+          <RefreshCw size={20} className={activeTab === 'returns' ? 'drop-shadow-[0_0_8px_rgba(251,113,133,0.5)]' : ''} />
           <span className="text-[10px]">Returns</span>
+          {returnRequests.length > 0 && <span className="absolute -top-1 -right-0.5 bg-rose-600 text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow animate-pulse">{returnRequests.length}</span>}
         </button>
+
         <button onClick={() => setActiveTab('products')} className={`flex flex-col items-center gap-1 px-3 py-1 rounded-2xl transition ${activeTab === 'products' || activeTab === 'add_product' ? 'text-emerald-400 font-black' : 'hover:text-slate-200'}`}>
-          <ShoppingBag size={20} />
+          <ShoppingBag size={20} className={activeTab === 'products' || activeTab === 'add_product' ? 'drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : ''} />
           <span className="text-[10px]">Catalog</span>
+        </button>
+
+        <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center gap-1 px-3 py-1 rounded-2xl transition ${activeTab === 'settings' ? 'text-emerald-400 font-black' : 'hover:text-slate-200'}`}>
+          <Settings size={20} className={activeTab === 'settings' ? 'drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : ''} />
+          <span className="text-[10px]">Settings</span>
         </button>
       </nav>
     </div>
   );
           }
-
-        
-                
       
+                            
+                            
+              
   
-                        
-  
+        
+      
   
   
