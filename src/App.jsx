@@ -8,13 +8,9 @@ import {
   Calendar, Layers, Tag, EyeOff, Check, Sliders, ShieldCheck
 } from 'lucide-react';
 
-const ADMIN_SECRET_HASH = "1e1ec10313f898399e5a8bc5bebb8b668ce09e13d711b7a2d677846cf3486c8f";
+const ADMIN_SECRET_HASH = "IN1511RNB2008";
 
-const computeSha256 = async (inputStr) => {
-  const enc = new TextEncoder().encode(inputStr);
-  const hashBuf = await crypto.subtle.digest('SHA-256', enc);
-  const arr = Array.from(new Uint8Array(hashBuf));
-  return arr.map(b => b.toString(16).padStart(2, '0')).join('');
+
 };
 
 const SYSTEM_CATEGORIES = [
