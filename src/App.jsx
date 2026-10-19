@@ -8,7 +8,7 @@ import {
   Calendar, Layers, Tag, EyeOff, Check, Sliders, ShieldCheck
 } from 'lucide-react';
 
-const ADMIN_SECRET_HASH = "a8ba4dc845dc339c9f289ff4ca3082ad65da98466bca5e326c9f69202167dcf1";
+const ADMIN_SECRET_HASH = "1e1ec10313f898399e5a8bc5bebb8b668ce09e13d711b7a2d677846cf3486c8f";
 
 const computeSha256 = async (inputStr) => {
   const enc = new TextEncoder().encode(inputStr);
@@ -93,21 +93,18 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modals States
   const [selectedScreenshot, setSelectedScreenshot] = useState(null);
   const [selectedDamagePhoto, setSelectedDamagePhoto] = useState(null);
   const [printOrder, setPrintOrder] = useState(null);
   const [hideItemInPrint, setHideItemInPrint] = useState(false);
   const [previewProduct, setPreviewProduct] = useState(null);
 
-  // In-App Toast
   const [appAlert, setAppAlert] = useState(null);
   const showNotification = (title, msg, type = 'info') => {
     setAppAlert({ title, msg, type });
     setTimeout(() => setAppAlert(null), 3500);
   };
 
-  // Product Form States (With Custom Policy Controls)
   const [editingId, setEditingId] = useState(null);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryText, setCustomCategoryText] = useState('');
@@ -215,7 +212,6 @@ export default function App() {
     localStorage.removeItem('bmart_seller_logged');
   };
 
-  // Fixed Permanent Product Delete (Solves Refresh Wapas Aana Issue)
   const handleDeleteProduct = async (id) => {
     const confirmDelete = window.confirm("⚠️ Kya aap is product ko database se hamesha ke liye hatana chahte hain?");
     if (!confirmDelete) return;
@@ -228,11 +224,10 @@ export default function App() {
         .eq('id', id);
 
       if (error) {
-        showNotification("Delete Blocked", "Supabase policy ne delete rok diya: " + error.message, "error");
-        console.error("Supabase delete error:", error);
+        showNotification("Delete Blocked", "Supabase policy error: " + error.message, "error");
       } else {
         setProducts((prev) => prev.filter((p) => p.id !== id));
-        showNotification("Deleted!", "Product permanently delete ho gaya aur refresh karne par wapas nahi aayega.", "success");
+        showNotification("Deleted!", "Product permanently delete ho gaya.", "success");
       }
     } catch (err) {
       showNotification("Error", err.message, "error");
@@ -279,7 +274,6 @@ export default function App() {
     }
 
     const finalCategory = isCustomCategory ? (customCategoryText.trim() || 'General') : prodForm.category;
-
     const cancelHoursVal = prodForm.allow_cancel ? Number(prodForm.cancel_hours || 0) : 0;
     const returnDaysVal = prodForm.allow_return ? Number(prodForm.return_days || 0) : 0;
 
@@ -318,7 +312,7 @@ export default function App() {
     if (error) {
       showNotification("Database Error", error.message, "error");
     } else {
-      showNotification("Safal", editingId ? "Product Update Ho Gaya!" : "Naya Product Barijan Mart Me Publish Ho Gaya!", "success");
+      showNotification("Safal", editingId ? "Product Update Ho Gaya!" : "Naya Product Publish Ho Gaya!", "success");
       setEditingId(null);
       setIsCustomCategory(false);
       setCustomCategoryText('');
@@ -340,8 +334,7 @@ export default function App() {
       fetchOrders();
     }
   };
-    // Permanent Order Delete (Storage Space Khali Karne Ke Liye)
-  const handleDeleteOrder = async (orderId) => {
+    const handleDeleteOrder = async (orderId) => {
     const confirmDelete = window.confirm(
       `⚠️ Kya aap Order #${orderId} ko hamesha ke liye DELETE karna chahte hain?\n\nIsse payment screenshot aur sara data Supabase se hat jayega aur database storage khali ho jayegi.`
     );
@@ -427,8 +420,6 @@ export default function App() {
   );
     return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col max-w-md mx-auto shadow-2xl relative pb-20 font-sans select-none">
-      
-      {/* Native App Top Header */}
       <header className="bg-slate-900/90 backdrop-blur-md p-4 sticky top-0 z-40 border-b border-slate-800 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center shadow-md">
@@ -452,7 +443,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Floating In-App Alerts */}
       {appAlert && (
         <div className="fixed top-16 left-4 right-4 max-w-xs mx-auto z-50 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className={`p-3 rounded-2xl shadow-2xl flex items-center justify-between text-white ${
@@ -472,9 +462,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Screen Container */}
       <main className="p-3.5 flex-1">
-        {/* 1. ORDERS VIEW */}
         {activeTab === 'orders' && (
           <div className="flex flex-col gap-3">
             <div className="relative">
@@ -819,11 +807,9 @@ export default function App() {
               </div>
             )}
 
-            {/* FULLY CUSTOMIZABLE TIME LIMITS (HOURS / DAYS INPUT) */}
             <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 flex flex-col gap-2.5">
               <span className="text-[10px] font-black text-emerald-400 flex items-center gap-1"><Clock size={13} /> Manchaha Time Limit Set Karein:</span>
 
-              {/* Cancellation Settings */}
               <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-slate-300">Order Cancellation Allowed?</span>
@@ -855,7 +841,6 @@ export default function App() {
                 )}
               </div>
 
-              {/* Return Settings */}
               <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-slate-300">Return / Replacement Allowed?</span>
@@ -888,7 +873,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Delivery Fee & UPI ID */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-[9px] font-bold text-slate-400">Advance Delivery Fee (₹)</label>
@@ -1020,7 +1004,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* Print Target (CSS Enforces Single 1-Page Output) */}
             <div id="printable-sticker" className="border-2 border-dashed border-slate-900 p-3.5 rounded-2xl bg-white text-slate-900 font-sans">
               <div className="border-b-2 border-slate-900 pb-2 mb-2 flex justify-between items-center">
                 <div>
@@ -1106,7 +1089,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Native Mobile Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/80 flex justify-around py-2.5 z-40 text-slate-400">
         <button onClick={() => setActiveTab('orders')} className={`flex flex-col items-center gap-1 relative ${activeTab === 'orders' ? 'text-emerald-400 font-black' : ''}`}>
           <Package size={19} />
@@ -1132,15 +1114,14 @@ export default function App() {
       </nav>
     </div>
   );
-          }
+                  }
           
-                                                                                                                                                                        
-            
-                      
-                      
+      
+                                          
+                        
+                    
   
+    
+      
   
-          
-  
-
-  
+    
