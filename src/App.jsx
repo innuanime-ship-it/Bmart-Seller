@@ -5,7 +5,7 @@ import {
   CheckCircle, Clock, Truck, XCircle, ExternalLink, RefreshCw, 
   LogOut, Shield, Search, Printer, ChevronRight, AlertCircle,
   Settings, PhoneCall, MessageCircle, ArrowLeft, Eye, Copy, QrCode, X, Sparkles,
-  Calendar, Layers, Tag, EyeOff, Check
+  Calendar, Layers, Tag, EyeOff, Check, Sliders, ShieldCheck
 } from 'lucide-react';
 
 const ADMIN_SECRET_HASH = "a8ba4dc845dc339c9f289ff4ca3082ad65da98466bca5e326c9f69202167dcf1";
@@ -66,7 +66,7 @@ export default function App() {
             width: 100% !important;
             max-width: 380px !important;
             margin: 0 auto !important;
-            padding: 12px !important;
+            padding: 10px !important;
             box-shadow: none !important;
             border: 2px dashed #000 !important;
             page-break-after: avoid !important;
@@ -74,7 +74,7 @@ export default function App() {
           }
           @page {
             size: auto;
-            margin: 4mm;
+            margin: 3mm;
           }
         }
       `;
@@ -93,18 +93,21 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Modals States
   const [selectedScreenshot, setSelectedScreenshot] = useState(null);
   const [selectedDamagePhoto, setSelectedDamagePhoto] = useState(null);
   const [printOrder, setPrintOrder] = useState(null);
   const [hideItemInPrint, setHideItemInPrint] = useState(false);
   const [previewProduct, setPreviewProduct] = useState(null);
 
+  // In-App Toast
   const [appAlert, setAppAlert] = useState(null);
   const showNotification = (title, msg, type = 'info') => {
     setAppAlert({ title, msg, type });
     setTimeout(() => setAppAlert(null), 3500);
   };
 
+  // Product Form States (With Custom Policy Controls)
   const [editingId, setEditingId] = useState(null);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryText, setCustomCategoryText] = useState('');
@@ -121,7 +124,9 @@ export default function App() {
     fabric: 'Pure Cotton',
     mfg_date: '',
     expiry_date: '',
+    allow_cancel: true,
     cancel_hours: '12',
+    allow_return: true,
     return_days: '7',
     images: [],
     seller_code: 'BM-01',
@@ -188,10 +193,7 @@ export default function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     const clean = passwordInput.trim();
-    if (!clean) {
-      showNotification("Error", "Password enter karein!", "error");
-      return;
-    }
+    if (!clean) return showNotification("Error", "Password enter karein!", "error");
 
     try {
       const hashed = await computeSha256(clean);
@@ -211,6 +213,33 @@ export default function App() {
   const handleLogout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('bmart_seller_logged');
+  };
+
+  // Fixed Permanent Product Delete (Solves Refresh Wapas Aana Issue)
+  const handleDeleteProduct = async (id) => {
+    const confirmDelete = window.confirm("⚠️ Kya aap is product ko database se hamesha ke liye hatana chahte hain?");
+    if (!confirmDelete) return;
+
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        showNotification("Delete Blocked", "Supabase policy ne delete rok diya: " + error.message, "error");
+        console.error("Supabase delete error:", error);
+      } else {
+        setProducts((prev) => prev.filter((p) => p.id !== id));
+        showNotification("Deleted!", "Product permanently delete ho gaya aur refresh karne par wapas nahi aayega.", "success");
+      }
+    } catch (err) {
+      showNotification("Error", err.message, "error");
+    } finally {
+      setLoading(false);
+      fetchProducts();
+    }
   };
     const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -251,6 +280,14 @@ export default function App() {
 
     const finalCategory = isCustomCategory ? (customCategoryText.trim() || 'General') : prodForm.category;
 
+    const cancelHoursVal = prodForm.allow_cancel ? Number(prodForm.cancel_hours || 0) : 0;
+    const returnDaysVal = prodForm.allow_return ? Number(prodForm.return_days || 0) : 0;
+
+    let dynamicReturnPolicy = "Return Not Allowed";
+    if (returnDaysVal > 0) {
+      dynamicReturnPolicy = `${returnDaysVal} Din Return / Replacement Policy`;
+    }
+
     const payload = {
       id: editingId || ('p_' + Date.now()),
       title: prodForm.title,
@@ -266,9 +303,9 @@ export default function App() {
       fabric: prodForm.fabric || null,
       mfg_date: prodForm.mfg_date || null,
       expiry_date: prodForm.expiry_date || null,
-      cancel_hours: Number(prodForm.cancel_hours || 0),
-      return_days: Number(prodForm.return_days || 0),
-      return_policy: Number(prodForm.return_days) > 0 ? `${prodForm.return_days} Days Return / Replacement` : "Return Not Allowed",
+      cancel_hours: cancelHoursVal,
+      return_days: returnDaysVal,
+      return_policy: dynamicReturnPolicy,
       images: prodForm.images,
       seller_code: prodForm.seller_code || 'BM-01',
       upi_id: prodForm.upi_id || 'Barijanmart@upi'
@@ -281,25 +318,18 @@ export default function App() {
     if (error) {
       showNotification("Database Error", error.message, "error");
     } else {
-      showNotification("Safal", editingId ? "Product Update Ho Gaya!" : "Naya Product Barijan Mart Me Jod Diya Gaya!", "success");
+      showNotification("Safal", editingId ? "Product Update Ho Gaya!" : "Naya Product Barijan Mart Me Publish Ho Gaya!", "success");
       setEditingId(null);
       setIsCustomCategory(false);
       setCustomCategoryText('');
       setProdForm({
         title: '', description: '', category: 'Fashion (Kapde)', price: '', mrp: '', min_quantity: '1', delivery_fee: '49',
-        sizes: 'S, M, L, XL', fabric: 'Pure Cotton', mfg_date: '', expiry_date: '', cancel_hours: '12', return_days: '7',
-        images: [], seller_code: 'BM-01', upi_id: 'Barijanmart@upi'
+        sizes: 'S, M, L, XL', fabric: 'Pure Cotton', mfg_date: '', expiry_date: '', allow_cancel: true, cancel_hours: '12', 
+        allow_return: true, return_days: '7', images: [], seller_code: 'BM-01', upi_id: 'Barijanmart@upi'
       });
       setActiveTab('products');
       fetchProducts();
     }
-  };
-
-  const handleDeleteProduct = async (id) => {
-    if (!window.confirm("Kya aap sach me ise catalog se hatana chahte hain?")) return;
-    await supabase.from('products').delete().eq('id', id);
-    fetchProducts();
-    showNotification("Deleted", "Product hata diya gaya.", "info");
   };
 
   const updateOrderStatus = async (orderId, newStatus) => {
@@ -310,7 +340,8 @@ export default function App() {
       fetchOrders();
     }
   };
-    const handleDeleteOrder = async (orderId) => {
+    // Permanent Order Delete (Storage Space Khali Karne Ke Liye)
+  const handleDeleteOrder = async (orderId) => {
     const confirmDelete = window.confirm(
       `⚠️ Kya aap Order #${orderId} ko hamesha ke liye DELETE karna chahte hain?\n\nIsse payment screenshot aur sara data Supabase se hat jayega aur database storage khali ho jayegi.`
     );
@@ -395,7 +426,9 @@ export default function App() {
     o.customer_phone?.includes(searchQuery)
   );
     return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col max-w-md mx-auto shadow-2xl relative pb-20 font-sans select-none">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col max-w-md mx-auto shadow-2xl relative pb-20 font-sans select-none">
+      
+      {/* Native App Top Header */}
       <header className="bg-slate-900/90 backdrop-blur-md p-4 sticky top-0 z-40 border-b border-slate-800 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center shadow-md">
@@ -419,6 +452,7 @@ export default function App() {
         </div>
       </header>
 
+      {/* Floating In-App Alerts */}
       {appAlert && (
         <div className="fixed top-16 left-4 right-4 max-w-xs mx-auto z-50 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className={`p-3 rounded-2xl shadow-2xl flex items-center justify-between text-white ${
@@ -438,7 +472,9 @@ export default function App() {
         </div>
       )}
 
+      {/* Main Screen Container */}
       <main className="p-3.5 flex-1">
+        {/* 1. ORDERS VIEW */}
         {activeTab === 'orders' && (
           <div className="flex flex-col gap-3">
             <div className="relative">
@@ -448,19 +484,19 @@ export default function App() {
                 placeholder="Order ID, Name ya Mobile se khojein..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-800/90 border border-slate-700/80 rounded-2xl text-xs text-white outline-none focus:border-emerald-500 shadow-inner"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-2xl text-xs text-white outline-none focus:border-emerald-500 shadow-inner"
               />
             </div>
 
             {filteredOrders.length === 0 ? (
-              <div className="text-center bg-slate-800/40 rounded-3xl p-10 border border-dashed border-slate-700/60">
-                <Package className="mx-auto text-slate-500 mb-2" size={32} />
+              <div className="text-center bg-slate-900/50 rounded-3xl p-10 border border-dashed border-slate-800">
+                <Package className="mx-auto text-slate-600 mb-2" size={32} />
                 <p className="text-slate-400 text-xs font-bold">Koi live order nahi mila.</p>
               </div>
             ) : (
               filteredOrders.map((o) => (
-                <div key={o.id} className="bg-slate-800/70 border border-slate-700/80 rounded-3xl p-4 shadow-xl flex flex-col gap-3">
-                  <div className="flex justify-between items-start border-b border-slate-700/50 pb-2.5">
+                <div key={o.id} className="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 shadow-xl flex flex-col gap-3">
+                  <div className="flex justify-between items-start border-b border-slate-800 pb-2.5">
                     <div>
                       <span className="font-black text-xs text-emerald-400">#{o.id}</span>
                       <p className="text-[10px] text-slate-400 mt-0.5">{new Date(o.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
@@ -475,7 +511,7 @@ export default function App() {
                     </span>
                   </div>
 
-                  <div className="bg-slate-900/60 p-3 rounded-2xl border border-slate-700/40 text-xs flex flex-col gap-1">
+                  <div className="bg-slate-950/70 p-3 rounded-2xl border border-slate-800 text-xs flex flex-col gap-1">
                     <p className="font-black text-sm text-white">{o.customer_name}</p>
                     <div className="flex gap-2 text-slate-400 text-[11px]">
                       <span>📞 <a href={"tel:" + o.customer_phone} className="text-emerald-400 font-bold underline">{o.customer_phone}</a></span>
@@ -484,11 +520,11 @@ export default function App() {
                     <p className="text-[10px] text-slate-400 leading-relaxed mt-0.5">🏡 {o.full_address}</p>
                   </div>
 
-                  <div className="flex flex-col gap-1.5 bg-slate-900/40 border border-slate-700/30 rounded-2xl p-2.5">
+                  <div className="flex flex-col gap-1.5 bg-slate-950/40 border border-slate-800/80 rounded-2xl p-2.5">
                     {o.items?.map((it, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-xs py-1 border-b last:border-none border-slate-700/30">
+                      <div key={idx} className="flex items-center justify-between text-xs py-1 border-b last:border-none border-slate-800">
                         <div className="flex items-center gap-2">
-                          <img src={it.images?.[0] || 'https://via.placeholder.com/40'} className="w-8 h-8 rounded-lg object-contain bg-slate-800 border border-slate-700" alt="prod" />
+                          <img src={it.images?.[0] || 'https://via.placeholder.com/40'} className="w-8 h-8 rounded-lg object-contain bg-slate-900 border border-slate-800" alt="prod" />
                           <span className="font-bold text-slate-200 text-[11px] truncate max-w-[160px]">{it.title} ({it.size || 'Std'})</span>
                         </div>
                         <span className="text-[11px] font-black text-slate-300">x{it.quantity || 1} = ₹{it.price * (it.quantity || 1)}</span>
@@ -529,7 +565,7 @@ export default function App() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-700/40">
+                  <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-800">
                     <button onClick={() => updateOrderStatus(o.id, 'Processing')} className="py-1.5 bg-amber-500/20 text-amber-300 rounded-xl text-[10px] font-black">Processing</button>
                     <button onClick={() => updateOrderStatus(o.id, 'Shipped')} className="py-1.5 bg-blue-500/20 text-blue-300 rounded-xl text-[10px] font-black">Shipped</button>
                     <button onClick={() => updateOrderStatus(o.id, 'Delivered')} className="py-1.5 bg-emerald-500/20 text-emerald-300 rounded-xl text-[10px] font-black">Delivered</button>
@@ -549,14 +585,14 @@ export default function App() {
             </div>
 
             {returnRequests.length === 0 ? (
-              <div className="text-center bg-slate-800/40 rounded-3xl p-12 border border-dashed border-slate-700">
+              <div className="text-center bg-slate-900/50 rounded-3xl p-12 border border-dashed border-slate-800">
                 <CheckCircle className="mx-auto text-emerald-400 mb-2" size={32} />
                 <p className="text-slate-400 text-xs font-bold">Koi pending Return ya Replacement nahi hai.</p>
               </div>
             ) : (
               returnRequests.map((o) => (
-                <div key={o.id} className="bg-slate-800/80 rounded-3xl border-2 border-rose-500/30 p-4 shadow-xl flex flex-col gap-2.5">
-                  <div className="flex justify-between items-start border-b border-slate-700 pb-2">
+                <div key={o.id} className="bg-slate-900 border-2 border-rose-500/30 p-4 rounded-3xl shadow-xl flex flex-col gap-2.5">
+                  <div className="flex justify-between items-start border-b border-slate-800 pb-2">
                     <div>
                       <span className="font-black text-xs text-rose-400">#{o.id}</span>
                       <p className="text-[10px] text-slate-400">{o.customer_name} (📞 {o.customer_phone})</p>
@@ -566,7 +602,7 @@ export default function App() {
                     </span>
                   </div>
 
-                  <div className="p-2.5 bg-slate-900/60 rounded-xl text-xs">
+                  <div className="p-2.5 bg-slate-950/70 rounded-xl text-xs">
                     <p className="font-bold text-slate-300">Karan (Reason):</p>
                     <p className="text-[11px] text-slate-400 italic mt-0.5">{o.return_info?.reason || 'Karan likha nahi hai'}</p>
                   </div>
@@ -626,19 +662,19 @@ export default function App() {
 
             <div className="grid grid-cols-1 gap-2.5">
               {products.map((p) => (
-                <div key={p.id} className="bg-slate-800/80 rounded-2xl border border-slate-700/80 p-3 flex gap-3 items-center justify-between shadow-md">
+                <div key={p.id} className="bg-slate-900 border border-slate-800 p-3 rounded-2xl flex gap-3 items-center justify-between shadow-md">
                   <img 
                     src={p.images?.[0] || 'https://via.placeholder.com/60'} 
                     alt={p.title} 
                     onClick={() => setPreviewProduct(p)}
-                    className="w-14 h-14 rounded-xl object-contain bg-slate-900 border border-slate-700 cursor-pointer hover:scale-105 transition" 
+                    className="w-14 h-14 rounded-xl object-contain bg-slate-950 border border-slate-800 cursor-pointer hover:scale-105 transition" 
                   />
                   <div className="flex-1 min-w-0 text-xs cursor-pointer" onClick={() => setPreviewProduct(p)}>
                     <h4 className="font-bold text-white truncate flex items-center gap-1.5">
                       {p.title} <Eye size={12} className="text-slate-400" />
                     </h4>
                     <p className="text-slate-400 text-[11px]">Price: <b className="text-emerald-400">₹{p.price}</b> | Min Qty: <b>{p.min_quantity || 1}</b></p>
-                    <span className="text-[10px] bg-slate-700/80 text-emerald-300 px-2 py-0.5 rounded-full font-medium inline-block mt-0.5">
+                    <span className="text-[10px] bg-slate-800 text-emerald-300 px-2 py-0.5 rounded-full font-medium inline-block mt-0.5">
                       {p.category}
                     </span>
                   </div>
@@ -646,7 +682,11 @@ export default function App() {
                     <button 
                       onClick={() => {
                         setEditingId(p.id);
-                        setProdForm(p);
+                        setProdForm({
+                          ...p,
+                          allow_cancel: Number(p.cancel_hours || 0) > 0,
+                          allow_return: Number(p.return_days || 0) > 0
+                        });
                         if (!SYSTEM_CATEGORIES.includes(p.category)) {
                           setIsCustomCategory(true);
                           setCustomCategoryText(p.category);
@@ -655,7 +695,7 @@ export default function App() {
                         }
                         setActiveTab('add_product');
                       }} 
-                      className="p-2 text-slate-300 hover:bg-slate-700 rounded-xl"
+                      className="p-2 text-slate-300 hover:bg-slate-800 rounded-xl"
                     >
                       <Edit3 size={16} />
                     </button>
@@ -670,8 +710,8 @@ export default function App() {
         )}
                 {/* 4. ADD / EDIT PRODUCT FORM */}
         {activeTab === 'add_product' && (
-          <form onSubmit={handleSaveProduct} className="bg-slate-800/90 p-4 rounded-3xl border border-slate-700 shadow-2xl flex flex-col gap-3">
-            <div className="flex justify-between items-center border-b border-slate-700 pb-2">
+          <form onSubmit={handleSaveProduct} className="bg-slate-900 p-4 rounded-3xl border border-slate-800 shadow-2xl flex flex-col gap-3">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
               <h3 className="font-black text-xs text-emerald-400">{editingId ? 'Edit Product Item' : 'Naya Catalog Product Jodein'}</h3>
               <button type="button" onClick={() => setActiveTab('products')} className="text-xs font-bold text-slate-400">Cancel</button>
             </div>
@@ -681,14 +721,14 @@ export default function App() {
               placeholder="Product Title *" 
               value={prodForm.title} 
               onChange={(e) => setProdForm({ ...prodForm, title: e.target.value })} 
-              className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white outline-none focus:border-emerald-500" 
+              className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-emerald-500" 
             />
 
             <textarea 
               placeholder="Product Description (Quality, usage, features)..." 
               value={prodForm.description} 
               onChange={(e) => setProdForm({ ...prodForm, description: e.target.value })} 
-              className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white outline-none focus:border-emerald-500" 
+              className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-emerald-500" 
               rows={2} 
             />
 
@@ -704,7 +744,7 @@ export default function App() {
                     setProdForm({ ...prodForm, category: e.target.value });
                   }
                 }} 
-                className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white font-medium"
+                className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white font-medium"
               >
                 {SYSTEM_CATEGORIES.map((c, i) => (
                   <option key={i} value={c}>{c}</option>
@@ -720,7 +760,7 @@ export default function App() {
                   placeholder="e.g. Dairy / Doodh Products, Sports Gear..." 
                   value={customCategoryText} 
                   onChange={(e) => setCustomCategoryText(e.target.value)} 
-                  className="w-full px-3 py-2 text-xs bg-slate-900 border border-emerald-500 rounded-xl text-white" 
+                  className="w-full px-3 py-2 text-xs bg-slate-950 border border-emerald-500 rounded-xl text-white" 
                 />
               </div>
             )}
@@ -728,11 +768,11 @@ export default function App() {
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <label className="text-[9px] font-bold text-slate-400">Sell Price (₹) *</label>
-                <input type="number" value={prodForm.price} onChange={(e) => setProdForm({ ...prodForm, price: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-emerald-400 font-bold" />
+                <input type="number" value={prodForm.price} onChange={(e) => setProdForm({ ...prodForm, price: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-emerald-400 font-bold" />
               </div>
               <div>
                 <label className="text-[9px] font-bold text-slate-400">MRP (₹)</label>
-                <input type="number" value={prodForm.mrp} onChange={(e) => setProdForm({ ...prodForm, mrp: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-slate-300" />
+                <input type="number" value={prodForm.mrp} onChange={(e) => setProdForm({ ...prodForm, mrp: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-300" />
               </div>
               <div>
                 <label className="text-[9px] font-bold text-slate-400">Min Order Qty *</label>
@@ -741,18 +781,18 @@ export default function App() {
             </div>
 
             {(prodForm.category?.includes('Fashion') || customCategoryText.toLowerCase().includes('kapde')) && (
-              <div className="p-3 bg-slate-900/60 rounded-2xl border border-slate-700 flex flex-col gap-2">
+              <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800 flex flex-col gap-2">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-[9px] font-bold text-slate-400">Sizes (comma separated)</label>
-                    <input type="text" value={Array.isArray(prodForm.sizes) ? prodForm.sizes.join(', ') : prodForm.sizes} onChange={(e) => setProdForm({ ...prodForm, sizes: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-xl text-white" />
+                    <input type="text" value={Array.isArray(prodForm.sizes) ? prodForm.sizes.join(', ') : prodForm.sizes} onChange={(e) => setProdForm({ ...prodForm, sizes: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-xl text-white" />
                   </div>
                   <div>
                     <label className="text-[9px] font-bold text-slate-400">Fabric / Material</label>
                     <select 
                       value={prodForm.fabric || 'Pure Cotton'} 
                       onChange={(e) => setProdForm({ ...prodForm, fabric: e.target.value })} 
-                      className="w-full px-2 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-xl text-white font-medium"
+                      className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-xl text-white font-medium"
                     >
                       {FABRIC_OPTIONS.map((f, i) => (
                         <option key={i} value={f}>{f}</option>
@@ -764,63 +804,99 @@ export default function App() {
             )}
 
             {(prodForm.category?.includes('Groceries') || prodForm.category?.includes('Beauty') || customCategoryText.toLowerCase().includes('food')) && (
-              <div className="p-3 bg-slate-900/60 rounded-2xl border border-slate-700 flex flex-col gap-2">
-                <span className="text-[10px] font-bold text-amber-400 flex items-center gap-1"><Calendar size={13} /> Food / Grocery Validity Details:</span>
+              <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800 flex flex-col gap-2">
+                <span className="text-[10px] font-bold text-amber-400 flex items-center gap-1"><Calendar size={13} /> Food / Grocery Validity:</span>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-[9px] font-bold text-slate-400">Manufactured Date (Mfg)</label>
-                    <input type="date" value={prodForm.mfg_date || ''} onChange={(e) => setProdForm({ ...prodForm, mfg_date: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-xl text-white" />
+                    <input type="date" value={prodForm.mfg_date || ''} onChange={(e) => setProdForm({ ...prodForm, mfg_date: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-xl text-white" />
                   </div>
                   <div>
                     <label className="text-[9px] font-bold text-slate-400">Expiry Date (Exp)</label>
-                    <input type="date" value={prodForm.expiry_date || ''} onChange={(e) => setProdForm({ ...prodForm, expiry_date: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-xl text-rose-300 font-bold" />
+                    <input type="date" value={prodForm.expiry_date || ''} onChange={(e) => setProdForm({ ...prodForm, expiry_date: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-xl text-rose-300 font-bold" />
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="p-3 bg-slate-900/80 rounded-2xl border border-slate-700 flex flex-col gap-2">
-              <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1"><Clock size={13} /> Order Cancellation & Return Time Limits:</span>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[9px] font-bold text-slate-400">Auto Cancel Window (After Order)</label>
-                  <select 
-                    value={prodForm.cancel_hours} 
-                    onChange={(e) => setProdForm({ ...prodForm, cancel_hours: e.target.value })} 
-                    className="w-full px-2 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-xl text-white font-medium"
+            {/* FULLY CUSTOMIZABLE TIME LIMITS (HOURS / DAYS INPUT) */}
+            <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 flex flex-col gap-2.5">
+              <span className="text-[10px] font-black text-emerald-400 flex items-center gap-1"><Clock size={13} /> Manchaha Time Limit Set Karein:</span>
+
+              {/* Cancellation Settings */}
+              <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-300">Order Cancellation Allowed?</span>
+                  <button 
+                    type="button" 
+                    onClick={() => setProdForm({ ...prodForm, allow_cancel: !prodForm.allow_cancel })}
+                    className={`px-2.5 py-0.5 rounded-full text-[9px] font-black transition ${
+                      prodForm.allow_cancel ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-400'
+                    }`}
                   >
-                    <option value="0">Cancellation Allowed Nahi Hai</option>
-                    <option value="6">Order ke 6 Ghante Tak</option>
-                    <option value="12">Order ke 12 Ghante Tak</option>
-                    <option value="24">Order ke 24 Ghante Tak</option>
-                    <option value="48">Order ke 48 Ghante Tak</option>
-                  </select>
+                    {prodForm.allow_cancel ? "YES (Active)" : "NO (Disabled)"}
+                  </button>
                 </div>
-                <div>
-                  <label className="text-[9px] font-bold text-slate-400">Return Window (After Delivery)</label>
-                  <select 
-                    value={prodForm.return_days} 
-                    onChange={(e) => setProdForm({ ...prodForm, return_days: e.target.value })} 
-                    className="w-full px-2 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-xl text-white font-medium"
+                {prodForm.allow_cancel && (
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-400 block mb-1">Kitne Ghante Tak Cancel Kar Sakega? (Hours Dalein)</label>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="number" 
+                        min="1" 
+                        placeholder="e.g. 2, 6, 18, 24" 
+                        value={prodForm.cancel_hours} 
+                        onChange={(e) => setProdForm({ ...prodForm, cancel_hours: e.target.value })} 
+                        className="flex-1 px-3 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-emerald-400 font-bold" 
+                      />
+                      <span className="text-xs font-bold text-slate-400">Ghante (Hours)</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Return Settings */}
+              <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-300">Return / Replacement Allowed?</span>
+                  <button 
+                    type="button" 
+                    onClick={() => setProdForm({ ...prodForm, allow_return: !prodForm.allow_return })}
+                    className={`px-2.5 py-0.5 rounded-full text-[9px] font-black transition ${
+                      prodForm.allow_return ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-400'
+                    }`}
                   >
-                    <option value="0">Return / Replace Allowed Nahi Hai</option>
-                    <option value="3">Delivery ke 3 Din Tak</option>
-                    <option value="7">Delivery ke 7 Din Tak</option>
-                    <option value="10">Delivery ke 10 Din Tak</option>
-                    <option value="15">Delivery ke 15 Din Tak</option>
-                  </select>
+                    {prodForm.allow_return ? "YES (Active)" : "NO (Disabled)"}
+                  </button>
                 </div>
+                {prodForm.allow_return && (
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-400 block mb-1">Delivery Ke Kitne Din Baad Tak Return Ho Sakega? (Days Dalein)</label>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="number" 
+                        min="1" 
+                        placeholder="e.g. 3, 5, 7, 15" 
+                        value={prodForm.return_days} 
+                        onChange={(e) => setProdForm({ ...prodForm, return_days: e.target.value })} 
+                        className="flex-1 px-3 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-emerald-400 font-bold" 
+                      />
+                      <span className="text-xs font-bold text-slate-400">Din (Days)</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
+            {/* Delivery Fee & UPI ID */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-[9px] font-bold text-slate-400">Advance Delivery Fee (₹)</label>
-                <input type="number" value={prodForm.delivery_fee} onChange={(e) => setProdForm({ ...prodForm, delivery_fee: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white" />
+                <input type="number" value={prodForm.delivery_fee} onChange={(e) => setProdForm({ ...prodForm, delivery_fee: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white" />
               </div>
               <div>
-                <label className="text-[9px] font-bold text-slate-400">Seller / UPI Code</label>
-                <input type="text" value={prodForm.upi_id || 'Barijanmart@upi'} onChange={(e) => setProdForm({ ...prodForm, upi_id: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white font-mono" />
+                <label className="text-[9px] font-bold text-slate-400">UPI ID</label>
+                <input type="text" value={prodForm.upi_id || 'Barijanmart@upi'} onChange={(e) => setProdForm({ ...prodForm, upi_id: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white font-mono" />
               </div>
             </div>
 
@@ -836,8 +912,8 @@ export default function App() {
         )}
                 {/* 5. APP SETTINGS VIEW */}
         {activeTab === 'settings' && (
-          <form onSubmit={handleSaveSettings} className="bg-slate-800/90 p-4 rounded-3xl border border-slate-700 shadow-xl flex flex-col gap-3">
-            <h3 className="font-black text-xs text-emerald-400 border-b border-slate-700 pb-2">Customer Care & Store Settings</h3>
+          <form onSubmit={handleSaveSettings} className="bg-slate-900 p-4 rounded-3xl border border-slate-800 shadow-xl flex flex-col gap-3">
+            <h3 className="font-black text-xs text-emerald-400 border-b border-slate-800 pb-2">Customer Care & Store Settings</h3>
 
             <div>
               <label className="text-[10px] font-bold text-slate-400 block mb-1">Support Calling Phone Number *</label>
@@ -845,7 +921,7 @@ export default function App() {
                 type="tel" 
                 value={settingsForm.support_phone} 
                 onChange={(e) => setSettingsForm({ ...settingsForm, support_phone: e.target.value })} 
-                className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white font-mono font-bold" 
+                className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white font-mono font-bold" 
               />
             </div>
 
@@ -855,7 +931,7 @@ export default function App() {
                 type="text" 
                 value={settingsForm.whatsapp_url} 
                 onChange={(e) => setSettingsForm({ ...settingsForm, whatsapp_url: e.target.value })} 
-                className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white font-mono text-[11px]" 
+                className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white font-mono text-[11px]" 
               />
             </div>
 
@@ -865,7 +941,7 @@ export default function App() {
                 type="text" 
                 value={settingsForm.facebook_url} 
                 onChange={(e) => setSettingsForm({ ...settingsForm, facebook_url: e.target.value })} 
-                className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white font-mono text-[11px]" 
+                className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white font-mono text-[11px]" 
               />
             </div>
 
@@ -875,7 +951,7 @@ export default function App() {
                 type="text" 
                 value={settingsForm.instagram_url} 
                 onChange={(e) => setSettingsForm({ ...settingsForm, instagram_url: e.target.value })} 
-                className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white font-mono text-[11px]" 
+                className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white font-mono text-[11px]" 
               />
             </div>
 
@@ -889,7 +965,7 @@ export default function App() {
       {/* BIG PRODUCT PREVIEW MODAL */}
       {previewProduct && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setPreviewProduct(null)}>
-          <div className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-4 shadow-2xl flex flex-col gap-3 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-3xl p-4 shadow-2xl flex flex-col gap-3 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center border-b border-slate-800 pb-2">
               <span className="font-black text-xs text-emerald-400">Catalog Product Preview</span>
               <button onClick={() => setPreviewProduct(null)} className="p-1 text-slate-400 hover:text-white"><X size={16} /></button>
@@ -905,16 +981,16 @@ export default function App() {
               <p className="text-xs text-slate-400 mt-1 whitespace-pre-line leading-relaxed">{previewProduct.description}</p>
             </div>
 
-            <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700 flex flex-col gap-1.5 text-xs">
+            <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 flex flex-col gap-1.5 text-xs">
               <div className="flex justify-between"><span>Sell Price:</span><b className="text-emerald-400 text-sm">₹{previewProduct.price}</b></div>
               {previewProduct.mrp > previewProduct.price && <div className="flex justify-between text-slate-400"><span>MRP:</span><del>₹{previewProduct.mrp}</del></div>}
               <div className="flex justify-between"><span>Min Order Qty:</span><b>{previewProduct.min_quantity || 1} Piece</b></div>
               {previewProduct.fabric && <div className="flex justify-between"><span>Fabric / Material:</span><b className="text-amber-300">{previewProduct.fabric}</b></div>}
               {previewProduct.mfg_date && <div className="flex justify-between"><span>Mfg Date:</span><b>{previewProduct.mfg_date}</b></div>}
               {previewProduct.expiry_date && <div className="flex justify-between"><span>Expiry Date:</span><b className="text-rose-400">{previewProduct.expiry_date}</b></div>}
-              <div className="flex justify-between border-t border-slate-700/60 pt-1 text-[11px] text-slate-400">
-                <span>Auto Cancel: {previewProduct.cancel_hours ? `${previewProduct.cancel_hours}h` : 'No'}</span>
-                <span>Return: {previewProduct.return_days ? `${previewProduct.return_days}d` : 'No'}</span>
+              <div className="flex justify-between border-t border-slate-800 pt-1 text-[11px] text-slate-400">
+                <span>Auto Cancel: {Number(previewProduct.cancel_hours || 0) > 0 ? `${previewProduct.cancel_hours} Ghante` : 'Not Allowed'}</span>
+                <span>Return: {Number(previewProduct.return_days || 0) > 0 ? `${previewProduct.return_days} Din` : 'Not Allowed'}</span>
               </div>
             </div>
 
@@ -924,10 +1000,11 @@ export default function App() {
           </div>
         </div>
       )}
-            {/* 1-PAGE EXACT PRINT MODAL (WITH ITEM HIDE PRIVACY FEATURE) */}
+            {/* 1-PAGE EXACT PRINT MODAL (WITH PRIVACY TOGGLE) */}
       {printOrder && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 animate-in fade-in duration-200">
           <div className="bg-white text-slate-900 w-full max-w-sm rounded-3xl p-4 shadow-2xl flex flex-col gap-3 max-h-[95vh] overflow-y-auto">
+            
             <div className="flex items-center justify-between bg-slate-100 p-2 rounded-xl text-xs">
               <span className="font-bold text-slate-700 flex items-center gap-1.5">
                 {hideItemInPrint ? <EyeOff size={14} className="text-rose-600" /> : <Eye size={14} className="text-emerald-600" />}
@@ -943,6 +1020,7 @@ export default function App() {
               </button>
             </div>
 
+            {/* Print Target (CSS Enforces Single 1-Page Output) */}
             <div id="printable-sticker" className="border-2 border-dashed border-slate-900 p-3.5 rounded-2xl bg-white text-slate-900 font-sans">
               <div className="border-b-2 border-slate-900 pb-2 mb-2 flex justify-between items-center">
                 <div>
@@ -1011,7 +1089,7 @@ export default function App() {
 
       {selectedScreenshot && (
         <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4" onClick={() => setSelectedScreenshot(null)}>
-          <div className="bg-slate-900 border border-slate-700 p-3 rounded-3xl max-w-xs shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-slate-900 border border-slate-800 p-3 rounded-3xl max-w-xs shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <img src={selectedScreenshot} alt="Payment Proof" className="w-full h-auto object-contain rounded-2xl max-h-[70vh]" />
             <button onClick={() => setSelectedScreenshot(null)} className="w-full mt-2.5 py-2.5 bg-slate-800 text-white text-xs font-bold rounded-xl">Band Karein</button>
           </div>
@@ -1028,6 +1106,7 @@ export default function App() {
         </div>
       )}
 
+      {/* Native Mobile Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/80 flex justify-around py-2.5 z-40 text-slate-400">
         <button onClick={() => setActiveTab('orders')} className={`flex flex-col items-center gap-1 relative ${activeTab === 'orders' ? 'text-emerald-400 font-black' : ''}`}>
           <Package size={19} />
@@ -1053,15 +1132,15 @@ export default function App() {
       </nav>
     </div>
   );
-                                                         }
+          }
           
-      
+                                                                                                                                                                        
             
-        
-                                   
+                      
+                      
   
   
-  
-  
+          
   
 
+  
